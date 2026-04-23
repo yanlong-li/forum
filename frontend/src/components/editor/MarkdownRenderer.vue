@@ -10,7 +10,7 @@ const props = defineProps<{
 const router = useRouter()
 
 const md = new MarkdownIt({
-  html: false,
+  html: true,
   linkify: true,
   typographer: true,
   breaks: true,

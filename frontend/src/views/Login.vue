@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '../stores/auth'
 import { useToast } from '../composables/useToast'
 
@@ -8,6 +9,7 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const toast = useToast()
+const { t } = useI18n()
 
 const email = ref('')
 const password = ref('')
@@ -20,12 +22,12 @@ async function handleSubmit() {
 
   try {
     await authStore.login(email.value, password.value)
-    toast.success('Welcome back!')
+    toast.success(t('auth.welcomeBack'))
 
     const redirect = route.query.redirect as string
     router.push(redirect || '/')
   } catch (err: any) {
-    error.value = err.response?.data?.error?.message || 'Login failed'
+    error.value = err.response?.data?.error?.message || t('error.loginFailed')
   } finally {
     loading.value = false
   }
@@ -45,8 +47,8 @@ function loginWithGoogle() {
     <div class="w-full max-w-md">
       <div class="card p-8">
         <div class="text-center mb-8">
-          <h1 class="text-2xl font-bold text-slate-900">Welcome back</h1>
-          <p class="text-slate-600 mt-2">Sign in to your account</p>
+          <h1 class="text-2xl font-bold text-slate-900">{{ t('auth.welcomeBack') }}</h1>
+          <p class="text-slate-600 mt-2">{{ t('auth.signInToAccount') }}</p>
         </div>
 
         <form @submit.prevent="handleSubmit" class="space-y-6">
@@ -56,7 +58,7 @@ function loginWithGoogle() {
 
           <div>
             <label for="email" class="block text-sm font-medium text-slate-700 mb-2">
-              Email
+              {{ t('auth.email') }}
             </label>
             <input
               id="email"
@@ -70,7 +72,7 @@ function loginWithGoogle() {
 
           <div>
             <label for="password" class="block text-sm font-medium text-slate-700 mb-2">
-              Password
+              {{ t('auth.password') }}
             </label>
             <input
               id="password"
@@ -78,7 +80,7 @@ function loginWithGoogle() {
               type="password"
               required
               class="input"
-              placeholder="Your password"
+              :placeholder="t('auth.yourPassword')"
             />
           </div>
 
@@ -87,7 +89,7 @@ function loginWithGoogle() {
             :disabled="loading"
             class="btn btn-primary w-full"
           >
-            {{ loading ? 'Signing in...' : 'Sign in' }}
+            {{ loading ? t('auth.signingIn') : t('auth.signIn') }}
           </button>
         </form>
 
@@ -97,7 +99,7 @@ function loginWithGoogle() {
               <div class="w-full border-t border-slate-200"></div>
             </div>
             <div class="relative flex justify-center text-sm">
-              <span class="px-4 bg-white text-slate-500">Or continue with</span>
+              <span class="px-4 bg-white text-slate-500">{{ t('auth.orContinueWith') }}</span>
             </div>
           </div>
 
@@ -128,9 +130,9 @@ function loginWithGoogle() {
         </div>
 
         <p class="mt-6 text-center text-sm text-slate-600">
-          Don't have an account?
+          {{ t('auth.dontHaveAccount') }}
           <RouterLink to="/register" class="text-primary hover:text-primary-hover font-medium">
-            Sign up
+            {{ t('auth.signUp') }}
           </RouterLink>
         </p>
       </div>

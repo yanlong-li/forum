@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import api from '../../composables/useApi'
 import Loading from '../../components/common/Loading.vue'
 
+const { t } = useI18n()
 const stats = ref<any>(null)
 const loading = ref(true)
 
@@ -11,7 +13,7 @@ async function fetchStats() {
     const response = await api.get('/admin/stats')
     stats.value = response.data
   } catch (error) {
-    console.error('Failed to fetch stats:', error)
+    console.error(t('admin.loadFailed'), error)
   } finally {
     loading.value = false
   }
@@ -24,7 +26,7 @@ onMounted(() => {
 
 <template>
   <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <h1 class="text-2xl font-bold text-slate-900 mb-8">Admin Dashboard</h1>
+    <h1 class="text-2xl font-bold text-slate-900 mb-8">{{ t('admin.adminDashboard') }}</h1>
 
     <Loading v-if="loading" />
 
@@ -33,7 +35,7 @@ onMounted(() => {
         <div class="card p-6">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-slate-500">Daily Active Users</p>
+              <p class="text-sm text-slate-500">{{ t('admin.dailyActiveUsers') }}</p>
               <p class="text-3xl font-bold text-slate-900">{{ stats?.daily_active_users || 0 }}</p>
             </div>
             <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -47,7 +49,7 @@ onMounted(() => {
         <div class="card p-6">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-slate-500">Total Posts</p>
+              <p class="text-sm text-slate-500">{{ t('admin.totalPosts') }}</p>
               <p class="text-3xl font-bold text-slate-900">{{ stats?.total_posts || 0 }}</p>
             </div>
             <div class="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
@@ -61,7 +63,7 @@ onMounted(() => {
         <div class="card p-6">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-slate-500">Total Comments</p>
+              <p class="text-sm text-slate-500">{{ t('admin.totalComments') }}</p>
               <p class="text-3xl font-bold text-slate-900">{{ stats?.total_comments || 0 }}</p>
             </div>
             <div class="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center">
@@ -75,7 +77,7 @@ onMounted(() => {
         <div class="card p-6">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-slate-500">Total Users</p>
+              <p class="text-sm text-slate-500">{{ t('admin.totalUsers') }}</p>
               <p class="text-3xl font-bold text-slate-900">{{ stats?.total_users || 0 }}</p>
             </div>
             <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -89,37 +91,37 @@ onMounted(() => {
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div class="card p-6">
-          <h2 class="text-lg font-semibold text-slate-900 mb-4">Quick Actions</h2>
+          <h2 class="text-lg font-semibold text-slate-900 mb-4">{{ t('admin.quickActions') }}</h2>
           <div class="space-y-3">
             <RouterLink to="/admin/users" class="block p-4 rounded-lg border border-slate-200 hover:border-primary hover:bg-slate-50 transition-colors">
-              <h3 class="font-medium text-slate-900">User Management</h3>
-              <p class="text-sm text-slate-500">View and manage user accounts</p>
+              <h3 class="font-medium text-slate-900">{{ t('admin.userManagement') }}</h3>
+              <p class="text-sm text-slate-500">{{ t('admin.userManagementDesc') }}</p>
             </RouterLink>
             <RouterLink to="/admin/reports" class="block p-4 rounded-lg border border-slate-200 hover:border-primary hover:bg-slate-50 transition-colors">
-              <h3 class="font-medium text-slate-900">Content Moderation</h3>
-              <p class="text-sm text-slate-500">Review reported posts and comments</p>
+              <h3 class="font-medium text-slate-900">{{ t('admin.contentModeration') }}</h3>
+              <p class="text-sm text-slate-500">{{ t('admin.contentModerationDesc') }}</p>
             </RouterLink>
             <RouterLink to="/admin/announcements" class="block p-4 rounded-lg border border-slate-200 hover:border-primary hover:bg-slate-50 transition-colors">
-              <h3 class="font-medium text-slate-900">Announcements</h3>
-              <p class="text-sm text-slate-500">Manage site announcements</p>
+              <h3 class="font-medium text-slate-900">{{ t('admin.announcements') }}</h3>
+              <p class="text-sm text-slate-500">{{ t('admin.announcementsDesc') }}</p>
             </RouterLink>
           </div>
         </div>
 
         <div class="card p-6">
-          <h2 class="text-lg font-semibold text-slate-900 mb-4">System Status</h2>
+          <h2 class="text-lg font-semibold text-slate-900 mb-4">{{ t('admin.systemStatus') }}</h2>
           <div class="space-y-4">
             <div class="flex items-center justify-between">
-              <span class="text-slate-600">Database</span>
-              <span class="badge badge-success">Connected</span>
+              <span class="text-slate-600">{{ t('admin.database') }}</span>
+              <span class="badge badge-success">{{ t('admin.connected') }}</span>
             </div>
             <div class="flex items-center justify-between">
-              <span class="text-slate-600">API Status</span>
-              <span class="badge badge-success">Operational</span>
+              <span class="text-slate-600">{{ t('admin.apiStatus') }}</span>
+              <span class="badge badge-success">{{ t('admin.operational') }}</span>
             </div>
             <div class="flex items-center justify-between">
-              <span class="text-slate-600">WebSocket</span>
-              <span class="badge badge-success">Active</span>
+              <span class="text-slate-600">{{ t('admin.webSocket') }}</span>
+              <span class="badge badge-success">{{ t('admin.active') }}</span>
             </div>
           </div>
         </div>

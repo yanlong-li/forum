@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import type { PostSummary } from '../../types'
 import { formatDistanceToNow } from '../../utils/time'
 import LevelBadge from '../user/LevelBadge.vue'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   post: PostSummary
@@ -34,8 +37,8 @@ const timeAgo = computed(() => {
 
       <div class="flex-1 min-w-0">
         <div class="flex items-center space-x-2 text-sm">
-          <span v-if="post.is_pinned" class="text-red-500 font-medium">📌 Pinned</span>
-          <span v-if="post.is_featured" class="text-amber-500 font-medium">⭐ Featured</span>
+          <span v-if="post.is_pinned" class="text-red-500 font-medium">📌 {{ t('post.pinned') }}</span>
+          <span v-if="post.is_featured" class="text-amber-500 font-medium">⭐ {{ t('post.featured') }}</span>
           <RouterLink
             :to="`/profile/${post.author.username}`"
             class="font-medium text-slate-900 hover:text-primary"

@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import api from '../composables/useApi'
 import PostCard from '../components/post/PostCard.vue'
 import { usePrefetch } from '../composables/usePrefetch'
 import SigninCard from '../components/user/SigninCard.vue'
 
 defineOptions({ name: 'Home' })
+
+const { t } = useI18n()
 
 const posts = ref<any[]>([])
 const tags = ref<any[]>([])
@@ -100,14 +103,14 @@ onMounted(() => {
               class="text-lg font-medium transition-colors"
               :class="activeTab === 'latest' ? 'text-primary' : 'text-slate-500 hover:text-slate-700'"
             >
-              Latest
+              {{ t('home.latest') }}
             </button>
             <button
               @click="activeTab = 'hot'"
               class="text-lg font-medium transition-colors"
               :class="activeTab === 'hot' ? 'text-primary' : 'text-slate-500 hover:text-slate-700'"
             >
-              Hot 🔥
+              {{ t('home.hot') }} 🔥
             </button>
           </div>
         </div>
@@ -121,9 +124,9 @@ onMounted(() => {
         </div>
 
         <div v-else-if="posts.length === 0" class="card p-12 text-center">
-          <p class="text-slate-500">No posts yet. Be the first to create one!</p>
+          <p class="text-slate-500">{{ t('home.noPostsYet') }}</p>
           <RouterLink to="/create" class="btn btn-primary mt-4">
-            Create Post
+            {{ t('post.createPost') }}
           </RouterLink>
         </div>
 
@@ -139,7 +142,7 @@ onMounted(() => {
               @click="loadMore"
               class="btn btn-secondary"
             >
-              Load More
+              {{ t('home.loadMore') }}
             </button>
           </div>
         </div>
@@ -150,7 +153,7 @@ onMounted(() => {
           <SigninCard />
 
           <div class="card p-6">
-            <h2 class="text-lg font-semibold text-slate-900 mb-4">Popular Tags</h2>
+            <h2 class="text-lg font-semibold text-slate-900 mb-4">{{ t('home.popularTags') }}</h2>
             <div class="flex flex-wrap gap-2">
               <RouterLink
                 v-for="tag in tags"
@@ -165,9 +168,9 @@ onMounted(() => {
           </div>
 
           <div class="card p-6">
-            <h2 class="text-lg font-semibold text-slate-900 mb-4">About</h2>
+            <h2 class="text-lg font-semibold text-slate-900 mb-4">{{ t('home.about') }}</h2>
             <p class="text-slate-600 text-sm">
-              {{ announcement || 'Welcome to our community! Share your thoughts, ask questions, and connect with others.' }}
+              {{ announcement || t('home.welcome') }}
             </p>
           </div>
         </div>

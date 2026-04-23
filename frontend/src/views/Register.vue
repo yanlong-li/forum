@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '../stores/auth'
 import { useToast } from '../composables/useToast'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const toast = useToast()
+const { t } = useI18n()
 
 const username = ref('')
 const email = ref('')
@@ -20,10 +22,10 @@ async function handleSubmit() {
 
   try {
     await authStore.register(username.value, email.value, password.value)
-    toast.success('Registration successful! Please check your email to verify.')
+    toast.success(t('auth.registerSuccess') || 'Registration successful! Please check your email to verify.')
     router.push('/login')
   } catch (err: any) {
-    error.value = err.response?.data?.error?.message || 'Registration failed'
+    error.value = err.response?.data?.error?.message || t('error.registerFailed')
   } finally {
     loading.value = false
   }
@@ -35,8 +37,8 @@ async function handleSubmit() {
     <div class="w-full max-w-md">
       <div class="card p-8">
         <div class="text-center mb-8">
-          <h1 class="text-2xl font-bold text-slate-900">Create an account</h1>
-          <p class="text-slate-600 mt-2">Join our community</p>
+          <h1 class="text-2xl font-bold text-slate-900">{{ t('auth.createAnAccount') }}</h1>
+          <p class="text-slate-600 mt-2">{{ t('auth.joinOurCommunity') }}</p>
         </div>
 
         <form @submit.prevent="handleSubmit" class="space-y-6">
@@ -46,7 +48,7 @@ async function handleSubmit() {
 
           <div>
             <label for="username" class="block text-sm font-medium text-slate-700 mb-2">
-              Username
+              {{ t('auth.username') }}
             </label>
             <input
               id="username"
@@ -60,7 +62,7 @@ async function handleSubmit() {
 
           <div>
             <label for="email" class="block text-sm font-medium text-slate-700 mb-2">
-              Email
+              {{ t('auth.email') }}
             </label>
             <input
               id="email"
@@ -74,7 +76,7 @@ async function handleSubmit() {
 
           <div>
             <label for="password" class="block text-sm font-medium text-slate-700 mb-2">
-              Password
+              {{ t('auth.password') }}
             </label>
             <input
               id="password"
@@ -83,10 +85,10 @@ async function handleSubmit() {
               required
               minlength="8"
               class="input"
-              placeholder="At least 8 characters"
+              :placeholder="t('auth.passwordPlaceholder')"
             />
             <p class="mt-1 text-xs text-slate-500">
-              Must contain at least 8 characters, including uppercase, lowercase, and numbers
+              {{ t('auth.passwordRequirements') }}
             </p>
           </div>
 
@@ -95,14 +97,14 @@ async function handleSubmit() {
             :disabled="loading"
             class="btn btn-primary w-full"
           >
-            {{ loading ? 'Creating account...' : 'Create account' }}
+            {{ loading ? t('auth.creatingAccount') : t('auth.createAnAccount') }}
           </button>
         </form>
 
         <p class="mt-6 text-center text-sm text-slate-600">
-          Already have an account?
+          {{ t('auth.alreadyHaveAccount') }}
           <RouterLink to="/login" class="text-primary hover:text-primary-hover font-medium">
-            Sign in
+            {{ t('auth.signIn') }}
           </RouterLink>
         </p>
       </div>

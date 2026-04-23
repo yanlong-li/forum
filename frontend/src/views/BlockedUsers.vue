@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import api from '../composables/useApi'
 import { useToast } from '../composables/useToast'
 import Loading from '../components/common/Loading.vue'
@@ -16,13 +17,14 @@ interface BlockedUser {
 const blockedUsers = ref<BlockedUser[]>([])
 const loading = ref(true)
 const toast = useToast()
+const { t } = useI18n()
 
 async function fetchBlockedUsers() {
   try {
     const response = await api.get('/blocks')
     blockedUsers.value = response.data
   } catch (error) {
-    console.error('Failed to fetch blocked users:', error)
+    console.error(t('block.loadBlockedUsersFailed'), error)
   } finally {
     loading.value = false
   }
@@ -32,9 +34,9 @@ async function unblockUser(userId: string) {
   try {
     await api.delete(`/blocks/${userId}`)
     blockedUsers.value = blockedUsers.value.filter(u => u.id !== userId)
-    toast.success('User unblocked')
+    toast.success(t('block.userUnblocked'))
   } catch (error) {
-    toast.error('Failed to unblock user')
+    toast.error(t('block.unblockUserFailed'))
   }
 }
 
@@ -46,16 +48,16 @@ onMounted(() => {
 <template>
   <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="flex items-center justify-between mb-8">
-      <h1 class="text-2xl font-bold text-slate-900">Blocked Users</h1>
+      <h1 class="text-2xl font-bold text-slate-900">{{ t('block.blockedUsers') }}</h1>
       <RouterLink to="/settings" class="btn btn-secondary">
-        Back to Settings
+        {{ t('block.backToSettings') }}
       </RouterLink>
     </div>
 
     <Loading v-if="loading" />
 
     <div v-else-if="blockedUsers.length === 0" class="card p-8 text-center">
-      <p class="text-slate-500">You haven't blocked any users</p>
+      <p class="text-slate-500">{{ t('block.noBlockedUsers') }}</p>
     </div>
 
     <div v-else class="space-y-4">
@@ -90,7 +92,7 @@ onMounted(() => {
             @click="unblockUser(user.id)"
             class="btn btn-secondary"
           >
-            Unblock
+            {{ t('block.unblock') }}
           </button>
         </div>
       </div>

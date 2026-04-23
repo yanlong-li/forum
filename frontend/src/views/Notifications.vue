@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useNotificationStore } from '../stores/notification'
 import { useToast } from '../composables/useToast'
 import { formatDistanceToNow } from '../utils/time'
@@ -8,13 +9,14 @@ import Loading from '../components/common/Loading.vue'
 
 const notificationStore = useNotificationStore()
 const toast = useToast()
+const { t } = useI18n()
 
 async function handleMarkAllRead() {
   try {
     await notificationStore.markAllAsRead()
-    toast.success('All notifications marked as read')
+    toast.success(t('notification.allMarkedAsRead'))
   } catch {
-    toast.error('Failed to mark all as read')
+    toast.error(t('notification.markAllAsReadFailed'))
   }
 }
 
@@ -22,24 +24,24 @@ async function handleMarkRead(id: string) {
   try {
     await notificationStore.markAsRead(id)
   } catch {
-    toast.error('Failed to mark as read')
+    toast.error(t('notification.markAsReadFailed'))
   }
 }
 
 function getNotificationText(notification: any) {
   switch (notification.type) {
     case 'comment':
-      return 'commented on your post'
+      return t('notification.commentedOnYourPost')
     case 'follow':
-      return 'started following you'
+      return t('notification.startedFollowingYou')
     case 'like':
-      return 'liked your post'
+      return t('notification.likedYourPost')
     case 'reply':
-      return 'replied to your comment'
+      return t('notification.repliedToYourComment')
     case 'mention':
-      return 'mentioned you in a post'
+      return t('notification.mentionedYou')
     default:
-      return 'interacted with you'
+      return t('notification.interactedWithYou')
   }
 }
 
@@ -51,14 +53,14 @@ onMounted(() => {
 <template>
   <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="flex items-center justify-between mb-8">
-      <h1 class="text-2xl font-bold text-slate-900">Notifications</h1>
+      <h1 class="text-2xl font-bold text-slate-900">{{ t('notification.notifications') }}</h1>
 
       <button
         v-if="notificationStore.hasUnread"
         @click="handleMarkAllRead"
         class="btn btn-secondary text-sm"
       >
-        Mark all as read
+        {{ t('notification.markAllRead') }}
       </button>
     </div>
 

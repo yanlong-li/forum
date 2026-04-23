@@ -1,27 +1,41 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '../../stores/auth'
 import { useNotificationStore } from '../../stores/notification'
 import { usePrefetch } from '../../composables/usePrefetch'
 
+const { locale, t } = useI18n()
 const router = useRouter()
 const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
 const { prefetchTags, prefetchHome } = usePrefetch()
 
 const isUserMenuOpen = ref(false)
+const isLangMenuOpen = ref(false)
 
 const showMobileMenu = ref(false)
 
 const navigation = [
-  { name: 'Home', href: '/' },
-  { name: 'Tags', href: '/tags' },
+  { name: 'nav.home', href: '/' },
+  { name: 'nav.posts', href: '/tags' },
+]
+
+const languages = [
+  { code: 'en', name: 'English' },
+  { code: 'zh-CN', name: '简体中文' }
 ]
 
 async function handleLogout() {
   await authStore.logout()
   router.push('/')
+}
+
+function setLocale(langCode: string) {
+  locale.value = langCode
+  localStorage.setItem('locale', langCode)
+  isLangMenuOpen.value = false
 }
 
 onMounted(() => {
@@ -48,12 +62,51 @@ onMounted(() => {
               class="text-slate-600 hover:text-slate-900 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
               @mouseenter="item.href === '/tags' ? prefetchTags() : item.href === '/' ? prefetchHome() : null"
             >
-              {{ item.name }}
+              {{ t(item.name) }}
             </RouterLink>
           </div>
         </div>
 
         <div class="flex items-center space-x-4">
+          <div class="relative">
+            <button
+              @click="isLangMenuOpen = !isLangMenuOpen"
+              class="flex items-center space-x-1 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors text-sm"
+            >
+              <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+              </svg>
+              <span class="text-slate-600">{{ languages.find(l => l.code === locale)?.name }}</span>
+              <svg class="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            <transition
+              enter-active-class="transition ease-out duration-100"
+              enter-from-class="transform opacity-0 scale-95"
+              enter-to-class="transform opacity-100 scale-100"
+              leave-active-class="transition ease-in duration-75"
+              leave-from-class="transform opacity-100 scale-100"
+              leave-to-class="transform opacity-0 scale-95"
+            >
+              <div
+                v-if="isLangMenuOpen"
+                class="absolute right-0 mt-2 w-36 bg-white rounded-lg shadow-lg border border-slate-200 py-1"
+              >
+                <button
+                  v-for="lang in languages"
+                  :key="lang.code"
+                  @click="setLocale(lang.code)"
+                  class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                  :class="{ 'bg-slate-100': locale === lang.code }"
+                >
+                  {{ lang.name }}
+                </button>
+              </div>
+            </transition>
+          </div>
+
           <template v-if="authStore.isAuthenticated">
             <RouterLink
               to="/notifications"
@@ -72,7 +125,7 @@ onMounted(() => {
               to="/create"
               class="btn btn-primary hidden sm:flex"
             >
-              New Post
+              {{ t('post.createPost') }}
             </RouterLink>
 
             <div class="relative">
@@ -111,21 +164,21 @@ onMounted(() => {
                     class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
                     @click="isUserMenuOpen = false"
                   >
-                    Profile
+                    {{ t('user.profile') }}
                   </RouterLink>
                   <RouterLink
                     to="/settings"
                     class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
                     @click="isUserMenuOpen = false"
                   >
-                    Settings
+                    {{ t('settings.settings') }}
                   </RouterLink>
                   <RouterLink
                     to="/bookmarks"
                     class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
                     @click="isUserMenuOpen = false"
                   >
-                    Bookmarks
+                    {{ t('post.bookmark') }}
                   </RouterLink>
                   <RouterLink
                     v-if="authStore.isAdmin"
@@ -133,13 +186,13 @@ onMounted(() => {
                     class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
                     @click="isUserMenuOpen = false"
                   >
-                    Admin
+                    {{ t('nav.admin') }}
                   </RouterLink>
                   <button
                     @click="handleLogout"
                     class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-slate-100"
                   >
-                    Sign out
+                    {{ t('common.logout') }}
                   </button>
                 </div>
               </transition>
@@ -151,13 +204,13 @@ onMounted(() => {
               to="/login"
               class="text-slate-600 hover:text-slate-900 px-3 py-2 rounded-lg text-sm font-medium"
             >
-              Sign in
+              {{ t('auth.login') }}
             </RouterLink>
             <RouterLink
               to="/register"
               class="btn btn-primary"
             >
-              Sign up
+              {{ t('auth.register') }}
             </RouterLink>
           </template>
 
@@ -200,7 +253,7 @@ onMounted(() => {
             class="block px-3 py-2 rounded-lg bg-primary text-white text-center"
             @click="showMobileMenu = false"
           >
-            New Post
+            {{ t('post.createPost') }}
           </RouterLink>
         </div>
       </div>

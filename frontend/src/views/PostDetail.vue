@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import api from '../composables/useApi'
 import { useAuthStore } from '../stores/auth'
 import { useToast } from '../composables/useToast'
@@ -16,6 +17,7 @@ import ShareButtons from '../components/common/ShareButtons.vue'
 const route = useRoute()
 const authStore = useAuthStore()
 const toast = useToast()
+const { t } = useI18n()
 
 const post = ref<any>(null)
 const loading = ref(true)
@@ -23,6 +25,7 @@ const error = ref('')
 const commentContent = ref('')
 const submitting = ref(false)
 const showReportModal = ref(false)
+const commentRefreshKey = ref(0)
 
 async function fetchPost() {
   try {
@@ -37,7 +40,7 @@ async function fetchPost() {
 
 async function handleVote(value: number) {
   if (!authStore.isAuthenticated) {
-    toast.info('Please login to vote')
+    toast.info(t('error.loginRequired'))
     return
   }
 
@@ -48,13 +51,13 @@ async function handleVote(value: number) {
     })
     await fetchPost()
   } catch (err: any) {
-    toast.error('Failed to vote')
+    toast.error(t('error.vote.failed'))
   }
 }
 
 async function handleBookmark() {
   if (!authStore.isAuthenticated) {
-    toast.info('Please login to bookmark')
+    toast.info(t('error.loginRequired'))
     return
   }
 
@@ -65,15 +68,15 @@ async function handleBookmark() {
       await api.post('/bookmarks', { post_id: post.value.id })
     }
     post.value.is_bookmarked = !post.value.is_bookmarked
-    toast.success(post.value.is_bookmarked ? 'Bookmarked' : 'Removed from bookmarks')
+    toast.success(post.value.is_bookmarked ? t('post.bookmarked') : t('post.removedFromBookmarks'))
   } catch (err: any) {
-    toast.error('Failed to bookmark')
+    toast.error(t('error.bookmark.failed'))
   }
 }
 
 function handleReport() {
   if (!authStore.isAuthenticated) {
-    toast.info('Please login to report')
+    toast.info(t('error.loginRequired'))
     return
   }
   showReportModal.value = true
@@ -88,10 +91,11 @@ async function handleComment() {
       content: commentContent.value,
     })
     commentContent.value = ''
-    toast.success('Comment added')
+    toast.success(t('post.comment') + ' ' + t('common.success'))
+    commentRefreshKey.value++
     await fetchPost()
   } catch (err: any) {
-    toast.error('Failed to add comment')
+    toast.error(t('error.comment.addFailed'))
   } finally {
     submitting.value = false
   }
@@ -108,7 +112,7 @@ onMounted(() => {
 
     <div v-else-if="error" class="card p-8 text-center">
       <p class="text-red-500">{{ error }}</p>
-      <RouterLink to="/" class="btn btn-primary mt-4">Go Home</RouterLink>
+      <RouterLink to="/" class="btn btn-primary mt-4">{{ t('post.goHome') }}</RouterLink>
     </div>
 
     <article v-if="post" class="card p-8">
@@ -184,7 +188,7 @@ onMounted(() => {
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
           </svg>
-          <span>{{ post.is_bookmarked ? 'Bookmarked' : 'Bookmark' }}</span>
+          <span>{{ post.is_bookmarked ? t('post.bookmarked') : t('post.bookmark') }}</span>
         </button>
 
         <button
@@ -194,7 +198,7 @@ onMounted(() => {
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
-          <span>Report</span>
+          <span>{{ t('post.report') }}</span>
         </button>
 
         <ShareButtons :title="post.title" />
@@ -202,19 +206,19 @@ onMounted(() => {
         <div class="flex-1"></div>
 
         <span class="text-sm text-slate-500">
-          {{ post.comment_count }} comments
+          {{ post.comment_count }} {{ t('post.comments') }}
         </span>
       </footer>
     </article>
 
     <section v-if="post" class="mt-8">
-      <h2 class="text-xl font-semibold text-slate-900 mb-4">Comments</h2>
+      <h2 class="text-xl font-semibold text-slate-900 mb-4">{{ t('post.comments') }}</h2>
 
       <div v-if="authStore.isAuthenticated" class="card p-6 mb-6">
         <form @submit.prevent="handleComment">
           <MarkdownEditor
             v-model="commentContent"
-            placeholder="Write a comment... (Supports Markdown, @mentions, #tags)"
+            :placeholder="t('post.writeCommentPlaceholder')"
             min-height="100px"
           />
           <div class="mt-4 flex justify-end">
@@ -223,13 +227,13 @@ onMounted(() => {
               :disabled="submitting || !commentContent.trim()"
               class="btn btn-primary"
             >
-              {{ submitting ? 'Posting...' : 'Post Comment' }}
+              {{ submitting ? t('post.postingComment') : t('post.postComment') }}
             </button>
           </div>
         </form>
       </div>
 
-      <CommentList :post-id="post.id" :post-author-id="post.author_id" />
+      <CommentList :post-id="post.id" :post-author-id="post.author_id" :refresh-key="commentRefreshKey" />
     </section>
 
     <ReportModal

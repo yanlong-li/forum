@@ -1,0 +1,199 @@
+{
+  "common": {
+    "home": "Home",
+    "login": "Login",
+    "register": "Register",
+    "logout": "Logout",
+    "search": "Search",
+    "settings": "Settings",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "submit": "Submit",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "close": "Close",
+    "loadMore": "Load More"
+  },
+  "nav": {
+    "home": "Home",
+    "posts": "Posts",
+    "notifications": "Notifications",
+    "profile": "Profile",
+    "admin": "Admin"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "username": "Username",
+    "forgotPassword": "Forgot password?",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?"
+  },
+  "post": {
+    "createPost": "Create Post",
+    "createNewPost": "Create New Post",
+    "title": "Title",
+    "titlePlaceholder": "Enter an interesting title...",
+    "content": "Content",
+    "tags": "Tags",
+    "addTag": "Add",
+    "addTagPlaceholder": "Add a tag...",
+    "upTo5Tags": "Up to 5 tags",
+    "publish": "Publish",
+    "publishing": "Publishing...",
+    "noPosts": "No posts yet",
+    "comments": "Comments",
+    "comment": "Comment",
+    "like": "Like",
+    "bookmark": "Bookmark",
+    "bookmarked": "Bookmarked",
+    "removedFromBookmarks": "Removed from bookmarks",
+    "report": "Report",
+    "share": "Share",
+    "goHome": "Go Home",
+    "writeComment": "Write a comment...",
+    "writeCommentPlaceholder": "Write a comment... (Supports Markdown, at mentions, tags)",
+    "postingComment": "Posting comment...",
+    "postComment": "Post Comment",
+    "supportsMarkdown": "Supports Markdown format, at mentions and tags",
+    "pinned": "Pinned",
+    "featured": "Featured"
+  },
+  "comment": {
+    "writeComment": "Write a comment...",
+    "postComment": "Post Comment",
+    "reply": "Reply",
+    "replyAdded": "Reply added",
+    "writeReplyPlaceholder": "Write your reply... (Supports Markdown)",
+    "postReply": "Post Reply",
+    "posting": "Posting...",
+    "report": "Report",
+    "accept": "Accept",
+    "accepted": "Accepted",
+    "acceptedBestAnswer": "Comment accepted as best answer",
+    "acceptFailed": "Failed to accept comment",
+    "noComments": "No comments yet",
+    "edited": "edited",
+    "replies": "replies",
+    "loadFailed": "Failed to load comments"
+  },
+  "user": {
+    "profile": "Profile",
+    "editProfile": "Edit Profile",
+    "posts": "Posts",
+    "comments": "Comments",
+    "followers": "Followers",
+    "following": "Following",
+    "badges": "Badges",
+    "follow": "Follow",
+    "unfollow": "Unfollow",
+    "blockedUsers": "Blocked Users",
+    "drafts": "Drafts",
+    "bio": "Bio",
+    "avatar": "Avatar URL"
+  },
+  "notification": {
+    "notifications": "Notifications",
+    "markAllRead": "Mark all as read",
+    "noNotifications": "No notifications"
+  },
+  "signin": {
+    "dailyCheckin": "Daily Check-in",
+    "checkIn": "Check In",
+    "checkedIn": "Checked In",
+    "checkingIn": "Checking in...",
+    "consecutiveDays": "consecutive days",
+    "totalPoints": "total points",
+    "checkinSuccess": "Check-in successful! +{points} points",
+    "checkinFailed": "Check-in failed",
+    "loginRequired": "Please login first"
+  },
+  "admin": {
+    "dashboard": "Dashboard",
+    "users": "Users",
+    "reports": "Reports",
+    "announcements": "Announcements",
+    "stats": "Statistics",
+    "pendingReports": "Pending Reports",
+    "dismiss": "Dismiss",
+    "deleteContent": "Delete Content",
+    "setPin": "Set Pin",
+    "setFeatured": "Set Featured"
+  },
+  "settings": {
+    "settings": "Settings",
+    "editProfile": "Edit Profile",
+    "blockedUsers": "Blocked Users",
+    "myDrafts": "My Drafts"
+  },
+  "report": {
+    "reportContent": "Report Content",
+    "selectReason": "Select a reason",
+    "spam": "Spam / Advertising",
+    "harassment": "Harassment / Bullying",
+    "hateSpeech": "Hate Speech",
+    "misinformation": "Misinformation",
+    "inappropriate": "Inappropriate Content",
+    "other": "Other",
+    "describeIssue": "Describe the issue",
+    "provideDetails": "Please provide more details...",
+    "submitReport": "Submit Report",
+    "submitting": "Submitting...",
+    "submitFailed": "Failed to submit report",
+    "thankYou": "Report submitted. Thank you for helping keep our community safe.",
+    "helpCommunity": "Help us maintain a safe community"
+  },
+  "home": {
+    "latest": "Latest",
+    "hot": "Hot",
+    "popularTags": "Popular Tags",
+    "about": "About"
+  },
+  "time": {
+    "justNow": "just now",
+    "minutesAgo": "{n} minutes ago",
+    "hoursAgo": "{n} hours ago",
+    "daysAgo": "{n} days ago"
+  },
+  "error": {
+    "failedToLoad": "Failed to load",
+    "failedToSave": "Failed to save",
+    "failedToDelete": "Failed to delete",
+    "networkError": "Network error",
+    "unauthorized": "Please login first",
+    "loginRequired": "Please login first",
+    "loginFailed": "Login failed",
+    "registerFailed": "Registration failed",
+    "posts": {
+      "titleRequired": "Title is required",
+      "contentTooShort": "Content must be at least 10 characters",
+      "tagsRequired": "At least one tag is required",
+      "createSuccess": "Post created successfully",
+      "createFailed": "Failed to create post"
+    },
+    "comment": {
+      "addFailed": "Failed to add comment"
+    },
+    "vote": {
+      "failed": "Vote failed"
+    },
+    "bookmark": {
+      "failed": "Bookmark failed"
+    }
+  },
+  "share": {
+    "share": "Share",
+    "copyLink": "Copy Link",
+    "linkCopied": "Link copied to clipboard",
+    "copyFailed": "Failed to copy link",
+    "twitter": "Twitter",
+    "facebook": "Facebook"
+  }
+}

@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import api from '../composables/useApi'
 import PostCard from '../components/post/PostCard.vue'
 import Loading from '../components/common/Loading.vue'
 
 const route = useRoute()
+const { t } = useI18n()
 
 const posts = ref<any[]>([])
 const tag = ref<any>(null)
@@ -30,7 +32,7 @@ async function fetchTagPosts() {
     hasMore.value = posts.value.length < postsData.total
     tag.value = tagResponse.data
   } catch (error) {
-    console.error('Failed to fetch posts:', error)
+    console.error(t('tag.loadFailed'), error)
   } finally {
     loading.value = false
   }
@@ -50,7 +52,7 @@ onMounted(() => {
   <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="mb-8">
       <span class="badge badge-primary text-2xl px-4 py-2">{{ tag?.name || route.params.name }}</span>
-      <p class="mt-2 text-slate-600">{{ tag?.post_count || 0 }} posts</p>
+      <p class="mt-2 text-slate-600">{{ tag?.post_count || 0 }} {{ t('tag.posts') }}</p>
     </div>
 
     <Loading v-if="loading" />
@@ -59,12 +61,12 @@ onMounted(() => {
       <PostCard v-for="post in posts" :key="post.id" :post="post" />
 
       <div v-if="posts.length === 0" class="card p-8 text-center text-slate-500">
-        No posts with this tag yet.
+        {{ t('tag.noPostsWithTag') }}
       </div>
 
       <div v-if="hasMore" class="flex justify-center mt-6">
         <button @click="loadMore" class="btn btn-secondary">
-          Load More
+          {{ t('tag.loadMore') }}
         </button>
       </div>
     </div>

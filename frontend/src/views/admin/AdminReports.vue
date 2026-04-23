@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import api from '../../composables/useApi'
 import { useToast } from '../../composables/useToast'
 import Loading from '../../components/common/Loading.vue'
@@ -17,6 +18,7 @@ interface Report {
   created_at: string
 }
 
+const { t } = useI18n()
 const reports = ref<Report[]>([])
 const loading = ref(true)
 const processing = ref<string | null>(null)
@@ -27,7 +29,7 @@ async function fetchReports() {
     const response = await api.get('/admin/reports', { params: { page: 1, limit: 50 } })
     reports.value = response.data.reports
   } catch (error) {
-    console.error('Failed to fetch reports:', error)
+    console.error(t('admin.loadFailed'), error)
   } finally {
     loading.value = false
   }
@@ -37,10 +39,10 @@ async function processReport(reportId: string, action: 'dismiss' | 'delete_conte
   processing.value = reportId
   try {
     await api.patch(`/admin/reports/${reportId}`, { action })
-    toast.success(`Report ${action === 'dismiss' ? 'dismissed' : 'content deleted'}`)
+    toast.success(action === 'dismiss' ? t('admin.reportDismissed') : t('admin.contentDeleted'))
     reports.value = reports.value.filter(r => r.id !== reportId)
   } catch (error) {
-    toast.error('Failed to process report')
+    toast.error(t('admin.processReportFailed'))
   } finally {
     processing.value = null
   }
@@ -54,16 +56,16 @@ onMounted(() => {
 <template>
   <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="flex items-center justify-between mb-8">
-      <h1 class="text-2xl font-bold text-slate-900">Content Moderation</h1>
+      <h1 class="text-2xl font-bold text-slate-900">{{ t('admin.contentModeration') }}</h1>
       <RouterLink to="/admin" class="btn btn-secondary">
-        Back to Dashboard
+        {{ t('admin.backToDashboard') }}
       </RouterLink>
     </div>
 
     <Loading v-if="loading" />
 
     <div v-else-if="reports.length === 0" class="card p-8 text-center">
-      <p class="text-slate-500">No pending reports</p>
+      <p class="text-slate-500">{{ t('admin.noPendingReports') }}</p>
     </div>
 
     <div v-else class="space-y-4">
@@ -72,18 +74,18 @@ onMounted(() => {
           <div class="flex-1">
             <div class="flex items-center space-x-2 mb-2">
               <span class="badge badge-error">{{ report.reason }}</span>
-              <span class="text-sm text-slate-500">Reported by {{ report.reporter_username }}</span>
+              <span class="text-sm text-slate-500">{{ t('admin.reportedBy') }} {{ report.reporter_username }}</span>
             </div>
             <p class="text-slate-700 mb-2">
-              <strong>{{ report.reported_username }}</strong> reported for {{ report.reason }}
+              <strong>{{ report.reported_username }}</strong> {{ t('admin.reportedFor') }} {{ report.reason }}
             </p>
             <div v-if="report.post_id" class="text-sm">
               <RouterLink :to="`/post/${report.post_id}`" class="text-primary hover:underline">
-                View Post
+                {{ t('admin.viewPost') }}
               </RouterLink>
             </div>
             <div v-if="report.comment_id" class="text-sm">
-              <span class="text-slate-500">Comment ID: {{ report.comment_id }}</span>
+              <span class="text-slate-500">{{ t('admin.commentId') }}: {{ report.comment_id }}</span>
             </div>
             <p class="text-xs text-slate-400 mt-2">
               {{ new Date(report.created_at).toLocaleString() }}
@@ -95,14 +97,14 @@ onMounted(() => {
               :disabled="processing === report.id"
               class="btn btn-secondary"
             >
-              Dismiss
+              {{ t('admin.dismiss') }}
             </button>
             <button
               @click="processReport(report.id, 'delete_content')"
               :disabled="processing === report.id"
               class="btn btn-primary"
             >
-              Delete Content
+              {{ t('admin.deleteContent') }}
             </button>
           </div>
         </div>

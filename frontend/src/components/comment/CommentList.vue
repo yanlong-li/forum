@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import api from '../../composables/useApi'
 import { useAuthStore } from '../../stores/auth'
 import { useToast } from '../../composables/useToast'
@@ -10,9 +11,12 @@ import MarkdownRenderer from '../editor/MarkdownRenderer.vue'
 import MarkdownEditor from '../editor/MarkdownEditor.vue'
 import ReportModal from '../report/ReportModal.vue'
 
+const { t } = useI18n()
+
 const props = defineProps<{
   postId: string
   postAuthorId?: string
+  refreshKey?: number
 }>()
 
 const authStore = useAuthStore()
@@ -43,7 +47,7 @@ async function fetchComments() {
 
     hasMore.value = comments.value.length < data.total
   } catch (err: any) {
-    toast.error('Failed to load comments')
+    toast.error(t('error.comment.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -63,12 +67,12 @@ async function submitReply(parentId: string) {
       content: replyContent.value,
       parent_id: parentId,
     })
-    toast.success('Reply added')
+    toast.success(t('comment.replyAdded'))
     replyContent.value = ''
     replyingTo.value = null
     await fetchComments()
   } catch (err: any) {
-    toast.error('Failed to add reply')
+    toast.error(t('error.comment.addFailed'))
   } finally {
     submitting.value = false
   }
@@ -81,7 +85,7 @@ function cancelReply() {
 
 function openReportModal(commentId: string) {
   if (!authStore.isAuthenticated) {
-    toast.info('Please login to report')
+    toast.info(t('auth.loginRequired'))
     return
   }
   reportingCommentId.value = commentId
@@ -90,22 +94,22 @@ function openReportModal(commentId: string) {
 
 async function handleAccept(commentId: string) {
   if (!authStore.isAuthenticated) {
-    toast.info('Please login')
+    toast.info(t('auth.loginRequired'))
     return
   }
 
   try {
     await api.post(`/comments/${commentId}/accept`)
-    toast.success('Comment accepted as best answer')
+    toast.success(t('comment.acceptedBestAnswer'))
     await fetchComments()
   } catch (err: any) {
-    toast.error('Failed to accept comment')
+    toast.error(t('comment.acceptFailed'))
   }
 }
 
 async function handleVote(commentId: string, value: number) {
   if (!authStore.isAuthenticated) {
-    toast.info('Please login to vote')
+    toast.info(t('auth.loginRequired'))
     return
   }
 
@@ -116,7 +120,7 @@ async function handleVote(commentId: string, value: number) {
     })
     await fetchComments()
   } catch (err: any) {
-    toast.error('Failed to vote')
+    toast.error(t('error.vote.failed'))
   }
 }
 
@@ -128,6 +132,16 @@ function loadMore() {
 onMounted(() => {
   fetchComments()
 })
+
+watch(() => props.postId, () => {
+  page.value = 1
+  fetchComments()
+})
+
+watch(() => props.refreshKey, () => {
+  page.value = 1
+  fetchComments()
+})
 </script>
 
 <template>
@@ -135,7 +149,7 @@ onMounted(() => {
     <Loading v-if="loading" />
 
     <div v-else-if="comments.length === 0" class="card p-6 text-center text-slate-500">
-      No comments yet. Be the first to comment!
+      {{ t('comment.noComments') }}
     </div>
 
     <div v-else>
@@ -173,7 +187,7 @@ onMounted(() => {
                 {{ formatDistanceToNow(new Date(comment.created_at)) }}
               </span>
               <span v-if="comment.updated_at !== comment.created_at" class="text-slate-400 text-sm">
-                (edited)
+                ({{ t('comment.edited') }})
               </span>
             </div>
 
@@ -199,7 +213,7 @@ onMounted(() => {
                 @click="handleReply(comment.id)"
                 class="text-sm text-slate-500 hover:text-primary transition-colors"
               >
-                Reply
+                {{ t('comment.reply') }}
               </button>
 
               <button
@@ -207,7 +221,7 @@ onMounted(() => {
                 @click="openReportModal(comment.id)"
                 class="text-sm text-slate-500 hover:text-red-500 transition-colors"
               >
-                Report
+                {{ t('comment.report') }}
               </button>
 
               <button
@@ -219,14 +233,14 @@ onMounted(() => {
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                 </svg>
-                <span>{{ comment.is_accepted ? 'Accepted' : 'Accept' }}</span>
+                <span>{{ comment.is_accepted ? t('comment.accepted') : t('comment.accept') }}</span>
               </button>
             </div>
 
             <div v-if="replyingTo === comment.id" class="mt-4 p-4 bg-slate-50 rounded-lg">
               <MarkdownEditor
                 v-model="replyContent"
-                placeholder="Write your reply... (Supports Markdown)"
+                :placeholder="t('comment.writeReplyPlaceholder')"
                 min-height="100px"
               />
               <div class="mt-3 flex justify-end space-x-2">
@@ -234,20 +248,20 @@ onMounted(() => {
                   @click="cancelReply"
                   class="btn btn-secondary"
                 >
-                  Cancel
+                  {{ t('common.cancel') }}
                 </button>
                 <button
                   @click="submitReply(comment.id)"
                   :disabled="submitting || !replyContent.trim()"
                   class="btn btn-primary"
                 >
-                  {{ submitting ? 'Posting...' : 'Post Reply' }}
+                  {{ submitting ? t('comment.posting') : t('comment.postReply') }}
                 </button>
               </div>
             </div>
 
             <div v-if="comment.reply_count > 0" class="mt-4 ml-4 space-y-4 border-l-2 border-slate-100 pl-4">
-              <p class="text-sm text-slate-500">{{ comment.reply_count }} replies</p>
+              <p class="text-sm text-slate-500">{{ comment.reply_count }} {{ t('comment.replies') }}</p>
             </div>
           </div>
         </div>
@@ -255,7 +269,7 @@ onMounted(() => {
 
       <div v-if="hasMore" class="flex justify-center mt-6">
         <button @click="loadMore" class="btn btn-secondary">
-          Load More
+          {{ t('common.loadMore') }}
         </button>
       </div>
     </div>

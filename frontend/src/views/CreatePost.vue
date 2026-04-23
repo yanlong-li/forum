@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import api from '../composables/useApi'
 import { useToast } from '../composables/useToast'
 import MarkdownEditor from '../components/editor/MarkdownEditor.vue'
 
 const router = useRouter()
 const toast = useToast()
+const { t } = useI18n()
 
 const title = ref('')
 const content = ref('')
@@ -28,15 +30,15 @@ function removeTag(tag: string) {
 
 async function handleSubmit() {
   if (!title.value.trim()) {
-    toast.error('Title is required')
+    toast.error(t('error.posts.titleRequired'))
     return
   }
   if (content.value.trim().length < 10) {
-    toast.error('Content must be at least 10 characters')
+    toast.error(t('error.posts.contentTooShort'))
     return
   }
   if (tags.value.length === 0) {
-    toast.error('At least one tag is required')
+    toast.error(t('error.posts.tagsRequired'))
     return
   }
 
@@ -47,10 +49,10 @@ async function handleSubmit() {
       content: content.value,
       tags: tags.value,
     })
-    toast.success('Post created!')
+    toast.success(t('error.posts.createSuccess'))
     router.push(`/post/${response.data.id}`)
   } catch (err: any) {
-    toast.error(err.response?.data?.error?.message || 'Failed to create post')
+    toast.error(err.response?.data?.error?.message || t('error.posts.createFailed'))
   } finally {
     submitting.value = false
   }
@@ -59,19 +61,19 @@ async function handleSubmit() {
 
 <template>
   <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <h1 class="text-2xl font-bold text-slate-900 mb-8">Create New Post</h1>
+    <h1 class="text-2xl font-bold text-slate-900 mb-8">{{ t('post.createNewPost') }}</h1>
 
     <form @submit.prevent="handleSubmit" class="space-y-6">
       <div>
         <label for="title" class="block text-sm font-medium text-slate-700 mb-2">
-          Title
+          {{ t('post.title') }}
         </label>
         <input
           id="title"
           v-model="title"
           type="text"
           class="input text-lg"
-          placeholder="Enter an interesting title..."
+          :placeholder="t('post.titlePlaceholder')"
           maxlength="200"
         />
         <p class="mt-1 text-sm text-slate-500">{{ title.length }}/200</p>
@@ -79,19 +81,19 @@ async function handleSubmit() {
 
       <div>
         <label for="content" class="block text-sm font-medium text-slate-700 mb-2">
-          Content
+          {{ t('post.content') }}
         </label>
         <MarkdownEditor
           v-model="content"
-          placeholder="Write your post content here... (Supports Markdown, @mentions, #tags)"
+          :placeholder="t('post.writeCommentPlaceholder')"
           min-height="300px"
         />
-        <p class="mt-1 text-sm text-slate-500">Supports Markdown formatting, @mentions and #tags</p>
+        <p class="mt-1 text-sm text-slate-500">{{ t('post.supportsMarkdown') }}</p>
       </div>
 
       <div>
         <label for="tags" class="block text-sm font-medium text-slate-700 mb-2">
-          Tags
+          {{ t('post.tags') }}
         </label>
         <div class="flex items-center space-x-2">
           <input
@@ -99,7 +101,7 @@ async function handleSubmit() {
             v-model="tagInput"
             type="text"
             class="input"
-            placeholder="Add a tag..."
+            :placeholder="t('post.addTagPlaceholder')"
             @keydown.enter.prevent="addTag"
           />
           <button
@@ -107,7 +109,7 @@ async function handleSubmit() {
             @click="addTag"
             class="btn btn-secondary"
           >
-            Add
+            {{ t('post.addTag') }}
           </button>
         </div>
         <div class="mt-3 flex flex-wrap gap-2">
@@ -128,19 +130,19 @@ async function handleSubmit() {
             </button>
           </span>
         </div>
-        <p class="mt-2 text-sm text-slate-500">Up to 5 tags</p>
+        <p class="mt-2 text-sm text-slate-500">{{ t('post.upTo5Tags') }}</p>
       </div>
 
       <div class="flex justify-end space-x-4">
         <RouterLink to="/" class="btn btn-secondary">
-          Cancel
+          {{ t('common.cancel') }}
         </RouterLink>
         <button
           type="submit"
           :disabled="submitting"
           class="btn btn-primary"
         >
-          {{ submitting ? 'Publishing...' : 'Publish Post' }}
+          {{ submitting ? t('post.publishing') : t('post.publish') }}
         </button>
       </div>
     </form>

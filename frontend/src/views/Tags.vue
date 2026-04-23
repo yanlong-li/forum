@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import api from '../composables/useApi'
 import Loading from '../components/common/Loading.vue'
 import { usePrefetch } from '../composables/usePrefetch'
 
 defineOptions({ name: 'Tags' })
 
+const { t } = useI18n()
 const tags = ref<any[]>([])
 const loading = ref(true)
 const page = ref(1)
@@ -34,7 +36,7 @@ async function fetchTags() {
 
     hasMore.value = tags.value.length < data.total
   } catch (error) {
-    console.error('Failed to fetch tags:', error)
+    console.error(t('tag.loadFailed'), error)
   } finally {
     loading.value = false
   }
@@ -52,7 +54,7 @@ onMounted(() => {
 
 <template>
   <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <h1 class="text-2xl font-bold text-slate-900 mb-8">Tags</h1>
+    <h1 class="text-2xl font-bold text-slate-900 mb-8">{{ t('tag.tags') }}</h1>
 
     <Loading v-if="loading" />
 
@@ -68,19 +70,19 @@ onMounted(() => {
             {{ tag.name }}
           </span>
           <span class="text-sm text-slate-500">
-            {{ tag.post_count }} posts
+            {{ tag.post_count }} {{ t('tag.posts') }}
           </span>
         </div>
       </RouterLink>
 
       <div v-if="tags.length === 0" class="col-span-full card p-8 text-center text-slate-500">
-        No tags yet.
+        {{ t('tag.noTagsYet') }}
       </div>
     </div>
 
     <div v-if="hasMore" class="flex justify-center mt-8">
       <button @click="loadMore" class="btn btn-secondary">
-        Load More
+        {{ t('tag.loadMore') }}
       </button>
     </div>
   </div>

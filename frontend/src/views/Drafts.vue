@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import api from '../composables/useApi'
 import { useToast } from '../composables/useToast'
 import Loading from '../components/common/Loading.vue'
@@ -17,13 +18,14 @@ interface Draft {
 const drafts = ref<Draft[]>([])
 const loading = ref(true)
 const toast = useToast()
+const { t } = useI18n()
 
 async function fetchDrafts() {
   try {
     const response = await api.get('/drafts')
     drafts.value = response.data
   } catch (error) {
-    console.error('Failed to fetch drafts:', error)
+    console.error(t('draft.loadDraftsFailed'), error)
   } finally {
     loading.value = false
   }
@@ -33,9 +35,9 @@ async function deleteDraft(id: string) {
   try {
     await api.delete(`/drafts/${id}`)
     drafts.value = drafts.value.filter(d => d.id !== id)
-    toast.success('Draft deleted')
+    toast.success(t('draft.draftDeleted'))
   } catch (error) {
-    toast.error('Failed to delete draft')
+    toast.error(t('draft.deleteDraftFailed'))
   }
 }
 
@@ -53,18 +55,18 @@ onMounted(() => {
 <template>
   <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="flex items-center justify-between mb-8">
-      <h1 class="text-2xl font-bold text-slate-900">Drafts</h1>
+      <h1 class="text-2xl font-bold text-slate-900">{{ t('draft.drafts') }}</h1>
       <RouterLink to="/create" class="btn btn-primary">
-        New Post
+        {{ t('draft.newPost') }}
       </RouterLink>
     </div>
 
     <Loading v-if="loading" />
 
     <div v-else-if="drafts.length === 0" class="card p-8 text-center">
-      <p class="text-slate-500">No drafts saved</p>
+      <p class="text-slate-500">{{ t('draft.noDraftsSaved') }}</p>
       <RouterLink to="/create" class="btn btn-primary mt-4">
-        Create New Post
+        {{ t('draft.createNewPost') }}
       </RouterLink>
     </div>
 
@@ -73,13 +75,13 @@ onMounted(() => {
         <div class="flex items-start justify-between">
           <div class="flex-1 min-w-0 cursor-pointer" @click="continueDraft(draft)">
             <h3 class="font-medium text-slate-900 truncate">
-              {{ draft.title || 'Untitled' }}
+              {{ draft.title || t('draft.untitled') }}
             </h3>
             <p class="text-sm text-slate-500 mt-1 line-clamp-2">
-              {{ draft.content || 'No content' }}
+              {{ draft.content || t('draft.noContent') }}
             </p>
             <p class="text-xs text-slate-400 mt-2">
-              Last edited {{ formatDistanceToNow(new Date(draft.updated_at)) }}
+              {{ t('draft.lastEdited') }} {{ formatDistanceToNow(new Date(draft.updated_at)) }}
             </p>
           </div>
           <button

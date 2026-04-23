@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import api from '../../composables/useApi'
 import { useAuthStore } from '../../stores/auth'
 import { useToast } from '../../composables/useToast'
 
+const { t } = useI18n()
 const authStore = useAuthStore()
 const toast = useToast()
 
@@ -24,7 +26,7 @@ async function fetchSigninStatus() {
 
 async function checkin() {
   if (!authStore.isAuthenticated) {
-    toast.info('Please login to check in')
+    toast.info(t('auth.loginRequired'))
     return
   }
 
@@ -38,9 +40,9 @@ async function checkin() {
       consecutive_days: data.consecutive_days,
       total_points: data.total_points
     }
-    toast.success(`Check-in successful! +${data.points_earned} points`)
+    toast.success(t('signin.checkinSuccess', { points: data.points_earned }))
   } catch (err: any) {
-    toast.error(err.response?.data?.error?.message || 'Check-in failed')
+    toast.error(err.response?.data?.error?.message || t('signin.checkinFailed'))
   } finally {
     loading.value = false
   }
@@ -61,11 +63,11 @@ onMounted(() => {
           </svg>
         </div>
         <div>
-          <h3 class="font-medium text-slate-900">Daily Check-in</h3>
+          <h3 class="font-medium text-slate-900">{{ t('signin.dailyCheckin') }}</h3>
           <p class="text-sm text-slate-500">
-            {{ signinStatus?.consecutive_days || 0 }} consecutive days
+            {{ signinStatus?.consecutive_days || 0 }} {{ t('signin.consecutiveDays') }}
             <span v-if="signinStatus?.total_points" class="text-amber-500">
-              ({{ signinStatus.total_points }} total points)
+              ({{ t('signin.totalPoints') }}: {{ signinStatus.total_points }})
             </span>
           </p>
         </div>
@@ -79,9 +81,9 @@ onMounted(() => {
           ? 'bg-green-100 text-green-700 cursor-default'
           : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 shadow-lg shadow-amber-200'"
       >
-        <span v-if="loading">Checking in...</span>
-        <span v-else-if="todayChecked">Checked In</span>
-        <span v-else>Check In (+3 pts)</span>
+        <span v-if="loading">{{ t('signin.checkingIn') }}</span>
+        <span v-else-if="todayChecked">{{ t('signin.checkedIn') }}</span>
+        <span v-else>{{ t('signin.checkIn') }}</span>
       </button>
     </div>
 
