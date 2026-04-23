@@ -3,6 +3,7 @@ import { onMounted } from 'vue'
 import { useAuthStore } from './stores/auth'
 import Navbar from './components/layout/Navbar.vue'
 import Toast from './components/common/Toast.vue'
+import AnnouncementBanner from './components/common/AnnouncementBanner.vue'
 
 const authStore = useAuthStore()
 
@@ -14,6 +15,7 @@ onMounted(() => {
 <template>
   <div class="min-h-screen flex flex-col">
     <Navbar />
+    <AnnouncementBanner />
     <main class="flex-1">
       <router-view v-slot="{ Component, route }">
         <transition name="fade-slide" mode="out-in">

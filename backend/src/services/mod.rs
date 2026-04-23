@@ -6,6 +6,10 @@ pub mod vote_service;
 pub mod follow_service;
 pub mod notification_service;
 pub mod admin_service;
+pub mod signin_service;
+pub mod badge_service;
+pub mod utils;
+pub mod sensitive_words;
 
 pub use auth_service::*;
 pub use user_service::*;
@@ -15,3 +19,5 @@ pub use vote_service::*;
 pub use follow_service::*;
 pub use notification_service::*;
 pub use admin_service::*;
+pub use signin_service::*;
+pub use badge_service::*;

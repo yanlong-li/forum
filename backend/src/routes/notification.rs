@@ -44,6 +44,8 @@ async fn mark_read(
                 avatar_url: None,
                 bio: None,
                 is_admin: user.is_admin,
+                points: 0,
+                level: 1,
                 created_at: chrono::Utc::now().to_rfc3339(),
             },
             post_id: None,

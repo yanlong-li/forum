@@ -36,6 +36,8 @@ function getNotificationText(notification: any) {
       return 'liked your post'
     case 'reply':
       return 'replied to your comment'
+    case 'mention':
+      return 'mentioned you in a post'
     default:
       return 'interacted with you'
   }

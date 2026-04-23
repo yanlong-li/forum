@@ -50,7 +50,13 @@ impl<'a> AdminService<'a> {
             return Err(AppError::Conflict("Report already processed".to_string()));
         }
 
-        report_repo.update_status(report_id, &req.status, admin_id).await
+        let new_status = match req.action.as_str() {
+            "dismiss" => "dismissed",
+            "delete_content" => "resolved",
+            _ => return Err(AppError::ValidationError("Invalid action".to_string())),
+        };
+
+        report_repo.update_status(report_id, new_status, admin_id).await
     }
 
     pub async fn list_reports(&self, page: i64, limit: i64, status: Option<&str>) -> Result<ReportListResponse> {

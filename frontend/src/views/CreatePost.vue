@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../composables/useApi'
 import { useToast } from '../composables/useToast'
+import MarkdownEditor from '../components/editor/MarkdownEditor.vue'
 
 const router = useRouter()
 const toast = useToast()
@@ -80,13 +81,12 @@ async function handleSubmit() {
         <label for="content" class="block text-sm font-medium text-slate-700 mb-2">
           Content
         </label>
-        <textarea
-          id="content"
+        <MarkdownEditor
           v-model="content"
-          class="input min-h-[300px] resize-none font-mono text-sm"
-          placeholder="Write your post content here..."
-        ></textarea>
-        <p class="mt-1 text-sm text-slate-500">Supports Markdown formatting</p>
+          placeholder="Write your post content here... (Supports Markdown, @mentions, #tags)"
+          min-height="300px"
+        />
+        <p class="mt-1 text-sm text-slate-500">Supports Markdown formatting, @mentions and #tags</p>
       </div>
 
       <div>

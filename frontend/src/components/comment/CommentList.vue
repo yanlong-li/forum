@@ -6,9 +6,13 @@ import { useAuthStore } from '../../stores/auth'
 import { useToast } from '../../composables/useToast'
 import { formatDistanceToNow } from '../../utils/time'
 import Loading from '../common/Loading.vue'
+import MarkdownRenderer from '../editor/MarkdownRenderer.vue'
+import MarkdownEditor from '../editor/MarkdownEditor.vue'
+import ReportModal from '../report/ReportModal.vue'
 
 const props = defineProps<{
   postId: string
+  postAuthorId?: string
 }>()
 
 const authStore = useAuthStore()
@@ -18,6 +22,11 @@ const comments = ref<any[]>([])
 const loading = ref(true)
 const page = ref(1)
 const hasMore = ref(true)
+const replyingTo = ref<string | null>(null)
+const replyContent = ref('')
+const submitting = ref(false)
+const showReportModal = ref(false)
+const reportingCommentId = ref<string | undefined>(undefined)
 
 async function fetchComments() {
   try {
@@ -41,18 +50,56 @@ async function fetchComments() {
 }
 
 async function handleReply(parentId: string) {
-  const content = prompt('Enter your reply:')
-  if (!content?.trim()) return
+  replyingTo.value = parentId
+  replyContent.value = ''
+}
 
+async function submitReply(parentId: string) {
+  if (!replyContent.value.trim()) return
+
+  submitting.value = true
   try {
     await api.post(`/comments/posts/${props.postId}/comments`, {
-      content,
+      content: replyContent.value,
       parent_id: parentId,
     })
     toast.success('Reply added')
+    replyContent.value = ''
+    replyingTo.value = null
     await fetchComments()
   } catch (err: any) {
     toast.error('Failed to add reply')
+  } finally {
+    submitting.value = false
+  }
+}
+
+function cancelReply() {
+  replyingTo.value = null
+  replyContent.value = ''
+}
+
+function openReportModal(commentId: string) {
+  if (!authStore.isAuthenticated) {
+    toast.info('Please login to report')
+    return
+  }
+  reportingCommentId.value = commentId
+  showReportModal.value = true
+}
+
+async function handleAccept(commentId: string) {
+  if (!authStore.isAuthenticated) {
+    toast.info('Please login')
+    return
+  }
+
+  try {
+    await api.post(`/comments/${commentId}/accept`)
+    toast.success('Comment accepted as best answer')
+    await fetchComments()
+  } catch (err: any) {
+    toast.error('Failed to accept comment')
   }
 }
 
@@ -130,9 +177,9 @@ onMounted(() => {
               </span>
             </div>
 
-            <p v-if="!comment.is_deleted" class="mt-2 text-slate-700">
-              {{ comment.content }}
-            </p>
+            <div v-if="!comment.is_deleted" class="mt-2 text-slate-700">
+              <MarkdownRenderer :content="comment.content" />
+            </div>
             <p v-else class="mt-2 text-slate-400 italic">[deleted]</p>
 
             <div class="mt-3 flex items-center space-x-4">
@@ -154,6 +201,49 @@ onMounted(() => {
               >
                 Reply
               </button>
+
+              <button
+                v-if="authStore.isAuthenticated && !comment.is_deleted"
+                @click="openReportModal(comment.id)"
+                class="text-sm text-slate-500 hover:text-red-500 transition-colors"
+              >
+                Report
+              </button>
+
+              <button
+                v-if="authStore.user?.id === postAuthorId && !comment.is_deleted"
+                @click="handleAccept(comment.id)"
+                class="flex items-center space-x-1 text-sm transition-colors"
+                :class="comment.is_accepted ? 'text-green-600' : 'text-slate-500 hover:text-green-600'"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>{{ comment.is_accepted ? 'Accepted' : 'Accept' }}</span>
+              </button>
+            </div>
+
+            <div v-if="replyingTo === comment.id" class="mt-4 p-4 bg-slate-50 rounded-lg">
+              <MarkdownEditor
+                v-model="replyContent"
+                placeholder="Write your reply... (Supports Markdown)"
+                min-height="100px"
+              />
+              <div class="mt-3 flex justify-end space-x-2">
+                <button
+                  @click="cancelReply"
+                  class="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  @click="submitReply(comment.id)"
+                  :disabled="submitting || !replyContent.trim()"
+                  class="btn btn-primary"
+                >
+                  {{ submitting ? 'Posting...' : 'Post Reply' }}
+                </button>
+              </div>
             </div>
 
             <div v-if="comment.reply_count > 0" class="mt-4 ml-4 space-y-4 border-l-2 border-slate-100 pl-4">
@@ -169,5 +259,11 @@ onMounted(() => {
         </button>
       </div>
     </div>
+
+    <ReportModal
+      :visible="showReportModal"
+      :comment-id="reportingCommentId"
+      @close="showReportModal = false; reportingCommentId = undefined"
+    />
   </div>
 </template>

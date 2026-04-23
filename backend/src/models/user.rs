@@ -15,6 +15,8 @@ pub struct User {
     pub is_locked: bool,
     pub failed_login_attempts: i32,
     pub locked_until: Option<String>,
+    pub points: i64,
+    pub level: i64,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -40,6 +42,8 @@ pub struct UserPublic {
     pub avatar_url: Option<String>,
     pub bio: Option<String>,
     pub is_admin: bool,
+    pub points: i64,
+    pub level: i64,
     pub created_at: String,
 }
 

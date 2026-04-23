@@ -31,6 +31,9 @@ pub struct ProcessReportRequest {
 pub struct ReportWithDetails {
     pub id: String,
     pub reporter: crate::models::user::UserPublic,
+    pub reporter_username: String,
+    pub reported_user_id: Option<String>,
+    pub reported_username: Option<String>,
     pub post_id: Option<String>,
     pub comment_id: Option<String>,
     pub reason: String,

@@ -90,6 +90,8 @@ impl<'a> AuthService<'a> {
                 avatar_url: user.avatar_url,
                 bio: user.bio,
                 is_admin: user.is_admin,
+                points: user.points,
+                level: user.level,
                 created_at: user.created_at,
             },
         })
@@ -122,6 +124,8 @@ impl<'a> AuthService<'a> {
                 avatar_url: user.avatar_url,
                 bio: user.bio,
                 is_admin: user.is_admin,
+                points: user.points,
+                level: user.level,
                 created_at: user.created_at,
             },
         })

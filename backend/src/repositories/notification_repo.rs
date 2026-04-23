@@ -85,6 +85,8 @@ impl<'a> NotificationRepository<'a> {
                     avatar_url: n.9,
                     bio: n.10,
                     is_admin: n.12,
+                    points: 0,
+                    level: 1,
                     created_at: n.11,
                 },
                 post_id: n.3,

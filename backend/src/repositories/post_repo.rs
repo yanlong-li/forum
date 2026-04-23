@@ -2,6 +2,31 @@ use sqlx::SqlitePool;
 use crate::error::{AppError, Result};
 use crate::models::post::{Post, PostSummary};
 use crate::models::user::UserPublic;
+use sqlx::FromRow;
+
+#[derive(Debug, FromRow)]
+struct PostListRow {
+    id: String,
+    author_id: String,
+    title: String,
+    content: String,
+    created_at: String,
+    updated_at: String,
+    is_pinned: bool,
+    is_featured: bool,
+    view_count: i64,
+    u_id: String,
+    username: String,
+    avatar_url: Option<String>,
+    bio: Option<String>,
+    u_created_at: String,
+    points: i64,
+    level: i64,
+    u_is_admin: bool,
+    tags: Option<String>,
+    like_count: i64,
+    comment_count: i64,
+}
 
 pub struct PostRepository<'a> {
     pool: &'a SqlitePool,
@@ -80,37 +105,35 @@ impl<'a> PostRepository<'a> {
 
         let query = if tag.is_some() {
             r#"
-            SELECT p.id, p.author_id, p.title, p.content, p.created_at, p.updated_at,
-                   u.id as u_id, u.username, u.avatar_url, u.bio, u.created_at as u_created_at,
+            SELECT p.id, p.author_id, p.title, p.content, p.created_at, p.updated_at, p.is_pinned, p.is_featured, p.view_count,
+                   u.id as u_id, u.username, u.avatar_url, u.bio, u.created_at as u_created_at, u.points, u.level, u.is_admin as u_is_admin,
                    (SELECT GROUP_CONCAT(t.name) FROM tags t JOIN post_tags pt ON t.id = pt.tag_id WHERE pt.post_id = p.id) as tags,
                    (SELECT COUNT(*) FROM votes WHERE post_id = p.id AND value = 1) as like_count,
-                   (SELECT COUNT(*) FROM comments WHERE post_id = p.id AND is_deleted = 0) as comment_count,
-                   u.is_admin as u_is_admin
+                   (SELECT COUNT(*) FROM comments WHERE post_id = p.id AND is_deleted = 0) as comment_count
             FROM posts p
             JOIN users u ON p.author_id = u.id
             JOIN post_tags pt ON p.id = pt.post_id
             JOIN tags t ON pt.tag_id = t.id
             WHERE p.is_deleted = 0 AND t.name = ?
-            ORDER BY p.created_at DESC
+            ORDER BY p.is_pinned DESC, p.is_featured DESC, p.created_at DESC
             LIMIT ? OFFSET ?
             "#
         } else {
             r#"
-            SELECT p.id, p.author_id, p.title, p.content, p.created_at, p.updated_at,
-                   u.id as u_id, u.username, u.avatar_url, u.bio, u.created_at as u_created_at,
+            SELECT p.id, p.author_id, p.title, p.content, p.created_at, p.updated_at, p.is_pinned, p.is_featured, p.view_count,
+                   u.id as u_id, u.username, u.avatar_url, u.bio, u.created_at as u_created_at, u.points, u.level, u.is_admin as u_is_admin,
                    (SELECT GROUP_CONCAT(t.name) FROM tags t JOIN post_tags pt ON t.id = pt.tag_id WHERE pt.post_id = p.id) as tags,
                    (SELECT COUNT(*) FROM votes WHERE post_id = p.id AND value = 1) as like_count,
-                   (SELECT COUNT(*) FROM comments WHERE post_id = p.id AND is_deleted = 0) as comment_count,
-                   u.is_admin as u_is_admin
+                   (SELECT COUNT(*) FROM comments WHERE post_id = p.id AND is_deleted = 0) as comment_count
             FROM posts p
             JOIN users u ON p.author_id = u.id
             WHERE p.is_deleted = 0
-            ORDER BY p.created_at DESC
+            ORDER BY p.is_pinned DESC, p.is_featured DESC, p.created_at DESC
             LIMIT ? OFFSET ?
             "#
         };
 
-        let posts: Vec<(String, String, String, String, String, String, String, String, Option<String>, Option<String>, String, Option<String>, i64, i64, bool)> = if let Some(tag) = tag {
+        let rows: Vec<PostListRow> = if let Some(tag) = tag {
             sqlx::query_as(query)
                 .bind(tag)
                 .bind(limit)
@@ -138,26 +161,31 @@ impl<'a> PostRepository<'a> {
                 .await?
         };
 
-        let summaries: Vec<PostSummary> = posts.into_iter().map(|p| {
-            let tags: Vec<String> = p.11.map(|t| t.split(',').map(String::from).collect()).unwrap_or_default();
+        let summaries: Vec<PostSummary> = rows.into_iter().map(|row| {
+            let tags: Vec<String> = row.tags.map(|t| t.split(',').map(String::from).collect()).unwrap_or_default();
             PostSummary {
-                id: p.0,
-                author_id: p.1,
+                id: row.id,
+                author_id: row.author_id,
                 author: UserPublic {
-                    id: p.6,
-                    username: p.7,
-                    avatar_url: p.8,
-                    bio: p.9,
-                    is_admin: p.14,
-                    created_at: p.10,
+                    id: row.u_id,
+                    username: row.username,
+                    avatar_url: row.avatar_url,
+                    bio: row.bio,
+                    is_admin: row.u_is_admin,
+                    points: row.points,
+                    level: row.level,
+                    created_at: row.u_created_at,
                 },
-                title: p.2,
-                content: p.3,
+                title: row.title,
+                content: row.content,
                 tags,
-                like_count: p.12,
-                comment_count: p.13,
+                like_count: row.like_count,
+                comment_count: row.comment_count,
                 is_bookmarked: false,
-                created_at: p.4,
+                is_pinned: row.is_pinned,
+                is_featured: row.is_featured,
+                view_count: row.view_count,
+                created_at: row.created_at,
             }
         }).collect();
 
@@ -167,18 +195,17 @@ impl<'a> PostRepository<'a> {
     pub async fn list_by_author(&self, author_id: &str, page: i64, limit: i64) -> Result<(Vec<PostSummary>, i64)> {
         let offset = (page - 1) * limit;
 
-        let posts: Vec<(String, String, String, String, String, String, String, String, Option<String>, Option<String>, String, Option<String>, i64, i64, bool)> = sqlx::query_as(
+        let rows: Vec<PostListRow> = sqlx::query_as(
             r#"
-            SELECT p.id, p.author_id, p.title, p.content, p.created_at, p.updated_at,
-                   u.id as u_id, u.username, u.avatar_url, u.bio, u.created_at as u_created_at,
+            SELECT p.id, p.author_id, p.title, p.content, p.created_at, p.updated_at, p.is_pinned, p.is_featured, p.view_count,
+                   u.id as u_id, u.username, u.avatar_url, u.bio, u.created_at as u_created_at, u.points, u.level, u.is_admin as u_is_admin,
                    (SELECT GROUP_CONCAT(t.name) FROM tags t JOIN post_tags pt ON t.id = pt.tag_id WHERE pt.post_id = p.id) as tags,
                    (SELECT COUNT(*) FROM votes WHERE post_id = p.id AND value = 1) as like_count,
-                   (SELECT COUNT(*) FROM comments WHERE post_id = p.id AND is_deleted = 0) as comment_count,
-                   u.is_admin as u_is_admin
+                   (SELECT COUNT(*) FROM comments WHERE post_id = p.id AND is_deleted = 0) as comment_count
             FROM posts p
             JOIN users u ON p.author_id = u.id
             WHERE p.author_id = ? AND p.is_deleted = 0
-            ORDER BY p.created_at DESC
+            ORDER BY p.is_pinned DESC, p.is_featured DESC, p.created_at DESC
             LIMIT ? OFFSET ?
             "#
         )
@@ -193,26 +220,31 @@ impl<'a> PostRepository<'a> {
             .fetch_one(self.pool)
             .await?;
 
-        let summaries: Vec<PostSummary> = posts.into_iter().map(|p| {
-            let tags: Vec<String> = p.11.map(|t| t.split(',').map(String::from).collect()).unwrap_or_default();
+        let summaries: Vec<PostSummary> = rows.into_iter().map(|row| {
+            let tags: Vec<String> = row.tags.map(|t| t.split(',').map(String::from).collect()).unwrap_or_default();
             PostSummary {
-                id: p.0,
-                author_id: p.1,
+                id: row.id,
+                author_id: row.author_id,
                 author: UserPublic {
-                    id: p.6,
-                    username: p.7,
-                    avatar_url: p.8,
-                    bio: p.9,
-                    is_admin: p.14,
-                    created_at: p.10,
+                    id: row.u_id,
+                    username: row.username,
+                    avatar_url: row.avatar_url,
+                    bio: row.bio,
+                    is_admin: row.u_is_admin,
+                    points: row.points,
+                    level: row.level,
+                    created_at: row.u_created_at,
                 },
-                title: p.2,
-                content: p.3,
+                title: row.title,
+                content: row.content,
                 tags,
-                like_count: p.12,
-                comment_count: p.13,
+                like_count: row.like_count,
+                comment_count: row.comment_count,
                 is_bookmarked: false,
-                created_at: p.4,
+                is_pinned: row.is_pinned,
+                is_featured: row.is_featured,
+                view_count: row.view_count,
+                created_at: row.created_at,
             }
         }).collect();
 
@@ -234,5 +266,85 @@ impl<'a> PostRepository<'a> {
             .execute(self.pool)
             .await?;
         Ok(())
+    }
+
+    pub async fn set_pin_featured(&self, post_id: &str, is_pinned: bool, is_featured: bool) -> Result<()> {
+        let now = chrono::Utc::now().to_rfc3339();
+        sqlx::query("UPDATE posts SET is_pinned = ?, is_featured = ?, updated_at = ? WHERE id = ?")
+            .bind(is_pinned)
+            .bind(is_featured)
+            .bind(&now)
+            .bind(post_id)
+            .execute(self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn increment_view_count(&self, post_id: &str) -> Result<()> {
+        sqlx::query("UPDATE posts SET view_count = view_count + 1 WHERE id = ?")
+            .bind(post_id)
+            .execute(self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn list_hot(&self, page: i64, limit: i64) -> Result<(Vec<PostSummary>, i64)> {
+        let offset = (page - 1) * limit;
+
+        let rows: Vec<PostListRow> = sqlx::query_as(
+            r#"
+            SELECT p.id, p.author_id, p.title, p.content, p.created_at, p.updated_at, p.is_pinned, p.is_featured, p.view_count,
+                   u.id as u_id, u.username, u.avatar_url, u.bio, u.created_at as u_created_at, u.points, u.level, u.is_admin as u_is_admin,
+                   (SELECT GROUP_CONCAT(t.name) FROM tags t JOIN post_tags pt ON t.id = pt.tag_id WHERE pt.post_id = p.id) as tags,
+                   (SELECT COUNT(*) FROM votes WHERE post_id = p.id AND value = 1) as like_count,
+                   (SELECT COUNT(*) FROM comments WHERE post_id = p.id AND is_deleted = 0) as comment_count
+            FROM posts p
+            JOIN users u ON p.author_id = u.id
+            WHERE p.is_deleted = 0
+            ORDER BY (SELECT COUNT(*) FROM votes WHERE post_id = p.id AND value = 1) * 3
+                     + (SELECT COUNT(*) FROM comments WHERE post_id = p.id AND is_deleted = 0) * 2
+                     + p.view_count DESC,
+                     p.created_at DESC
+            LIMIT ? OFFSET ?
+            "#
+        )
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(self.pool)
+        .await?;
+
+        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM posts WHERE is_deleted = 0")
+            .fetch_one(self.pool)
+            .await?;
+
+        let summaries: Vec<PostSummary> = rows.into_iter().map(|row| {
+            let tags: Vec<String> = row.tags.map(|t| t.split(',').map(String::from).collect()).unwrap_or_default();
+            PostSummary {
+                id: row.id,
+                author_id: row.author_id,
+                author: UserPublic {
+                    id: row.u_id,
+                    username: row.username,
+                    avatar_url: row.avatar_url,
+                    bio: row.bio,
+                    is_admin: row.u_is_admin,
+                    points: row.points,
+                    level: row.level,
+                    created_at: row.u_created_at,
+                },
+                title: row.title,
+                content: row.content,
+                tags,
+                like_count: row.like_count,
+                comment_count: row.comment_count,
+                is_bookmarked: false,
+                is_pinned: row.is_pinned,
+                is_featured: row.is_featured,
+                view_count: row.view_count,
+                created_at: row.created_at,
+            }
+        }).collect();
+
+        Ok((summaries, total))
     }
 }

@@ -9,6 +9,13 @@ pub mod tag;
 pub mod notification;
 pub mod admin;
 pub mod ws;
+pub mod signin;
+pub mod badge;
+pub mod folder;
+pub mod announcement;
+pub mod report;
+pub mod block;
+pub mod draft;
 
 use axum::Router;
 use std::sync::Arc;
@@ -25,6 +32,13 @@ use self::tag::tag_routes;
 use self::notification::notification_routes;
 use self::admin::admin_routes;
 use self::ws::ws_routes;
+use self::signin::signin_routes;
+use self::badge::badge_routes;
+use self::folder::folder_routes;
+use self::announcement::announcement_routes;
+use self::report::report_routes;
+use self::block::block_routes;
+use self::draft::draft_routes;
 
 pub fn app_routes() -> Router<Arc<AppState>> {
     Router::new()
@@ -39,4 +53,11 @@ pub fn app_routes() -> Router<Arc<AppState>> {
         .nest("/notifications", notification_routes())
         .nest("/admin", admin_routes())
         .nest("/ws", ws_routes())
+        .nest("/signin", signin_routes())
+        .nest("/badges", badge_routes())
+        .nest("/folders", folder_routes())
+        .nest("/announcements", announcement_routes())
+        .nest("/reports", report_routes())
+        .nest("/blocks", block_routes())
+        .nest("/drafts", draft_routes())
 }

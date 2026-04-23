@@ -10,6 +10,9 @@ pub struct Post {
     pub title: String,
     pub content: String,
     pub is_deleted: bool,
+    pub is_pinned: bool,
+    pub is_featured: bool,
+    pub view_count: i64,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -29,6 +32,12 @@ pub struct PostWithAuthor {
     pub is_bookmarked: bool,
     #[serde(default)]
     pub is_liked: bool,
+    #[serde(default)]
+    pub is_pinned: bool,
+    #[serde(default)]
+    pub is_featured: bool,
+    #[serde(default)]
+    pub view_count: i64,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -45,6 +54,12 @@ pub struct PostSummary {
     pub comment_count: i64,
     #[serde(default)]
     pub is_bookmarked: bool,
+    #[serde(default)]
+    pub is_pinned: bool,
+    #[serde(default)]
+    pub is_featured: bool,
+    #[serde(default)]
+    pub view_count: i64,
     pub created_at: String,
 }
 

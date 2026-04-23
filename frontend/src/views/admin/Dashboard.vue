@@ -99,6 +99,10 @@ onMounted(() => {
               <h3 class="font-medium text-slate-900">Content Moderation</h3>
               <p class="text-sm text-slate-500">Review reported posts and comments</p>
             </RouterLink>
+            <RouterLink to="/admin/announcements" class="block p-4 rounded-lg border border-slate-200 hover:border-primary hover:bg-slate-50 transition-colors">
+              <h3 class="font-medium text-slate-900">Announcements</h3>
+              <p class="text-sm text-slate-500">Manage site announcements</p>
+            </RouterLink>
           </div>
         </div>
 

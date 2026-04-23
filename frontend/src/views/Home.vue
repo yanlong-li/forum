@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import api from '../composables/useApi'
 import PostCard from '../components/post/PostCard.vue'
 import { usePrefetch } from '../composables/usePrefetch'
+import SigninCard from '../components/user/SigninCard.vue'
 
 defineOptions({ name: 'Home' })
 
@@ -12,10 +13,11 @@ const tags = ref<any[]>([])
 const loading = ref(true)
 const page = ref(1)
 const hasMore = ref(true)
+const activeTab = ref<'latest' | 'hot'>('latest')
 const { getPrefetchedData, hasPrefetchedData } = usePrefetch()
 
 async function fetchPosts() {
-  if (page.value === 1 && hasPrefetchedData('home')) {
+  if (page.value === 1 && hasPrefetchedData('home') && activeTab.value === 'latest') {
     const data = getPrefetchedData('home')
     posts.value = data.posts
     hasMore.value = posts.value.length < data.total
@@ -24,7 +26,8 @@ async function fetchPosts() {
   }
 
   try {
-    const response = await api.get('/posts', { params: { page: page.value, limit: 20 } })
+    const endpoint = activeTab.value === 'hot' ? '/posts/hot' : '/posts'
+    const response = await api.get(endpoint, { params: { page: page.value, limit: 20 } })
     const data = response.data
 
     if (page.value === 1) {
@@ -55,14 +58,34 @@ async function fetchTags() {
   }
 }
 
+const announcement = ref<string | null>(null)
+
+async function fetchAnnouncement() {
+  try {
+    const response = await api.get('/announcements')
+    if (response.data.length > 0) {
+      announcement.value = response.data[0].content
+    }
+  } catch (error) {
+    console.error('Failed to fetch announcement:', error)
+  }
+}
+
 function loadMore() {
   page.value++
   fetchPosts()
 }
 
+watch(activeTab, () => {
+  page.value = 1
+  posts.value = []
+  fetchPosts()
+})
+
 onMounted(() => {
   fetchPosts()
   fetchTags()
+  fetchAnnouncement()
 })
 </script>
 
@@ -71,7 +94,22 @@ onMounted(() => {
     <div class="lg:grid lg:grid-cols-12 lg:gap-8">
       <div class="lg:col-span-8">
         <div class="flex items-center justify-between mb-6">
-          <h1 class="text-2xl font-bold text-slate-900">Latest Posts</h1>
+          <div class="flex items-center space-x-4">
+            <button
+              @click="activeTab = 'latest'"
+              class="text-lg font-medium transition-colors"
+              :class="activeTab === 'latest' ? 'text-primary' : 'text-slate-500 hover:text-slate-700'"
+            >
+              Latest
+            </button>
+            <button
+              @click="activeTab = 'hot'"
+              class="text-lg font-medium transition-colors"
+              :class="activeTab === 'hot' ? 'text-primary' : 'text-slate-500 hover:text-slate-700'"
+            >
+              Hot 🔥
+            </button>
+          </div>
         </div>
 
         <div v-if="loading" class="space-y-4">
@@ -109,6 +147,8 @@ onMounted(() => {
 
       <aside class="hidden lg:block lg:col-span-4">
         <div class="sticky top-24 space-y-6">
+          <SigninCard />
+
           <div class="card p-6">
             <h2 class="text-lg font-semibold text-slate-900 mb-4">Popular Tags</h2>
             <div class="flex flex-wrap gap-2">
@@ -116,7 +156,7 @@ onMounted(() => {
                 v-for="tag in tags"
                 :key="tag.id"
                 :to="`/tags/${tag.name}`"
-                class="badge badge-primary hover:bg-primary-hover"
+                class="badge badge-primary hover:bg-primary-hover hover:text-white"
               >
                 {{ tag.name }}
                 <span class="ml-1 text-xs opacity-75">{{ tag.post_count }}</span>
@@ -127,7 +167,7 @@ onMounted(() => {
           <div class="card p-6">
             <h2 class="text-lg font-semibold text-slate-900 mb-4">About</h2>
             <p class="text-slate-600 text-sm">
-              Welcome to our community! Share your thoughts, ask questions, and connect with others.
+              {{ announcement || 'Welcome to our community! Share your thoughts, ask questions, and connect with others.' }}
             </p>
           </div>
         </div>

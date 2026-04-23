@@ -52,12 +52,16 @@ impl<'a> ReportRepository<'a> {
             "1=1".to_string()
         };
 
-        let reports: Vec<(String, String, Option<String>, Option<String>, String, String, String, Option<String>, Option<String>, String, String, Option<String>, Option<String>, String, bool)> = sqlx::query_as(&format!(
+        let reports: Vec<(String, String, Option<String>, Option<String>, String, String, String, Option<String>, Option<String>, String, String, Option<String>, Option<String>, String, bool, Option<String>)> = sqlx::query_as(&format!(
             r#"
             SELECT r.id, r.reporter_id, r.post_id, r.comment_id, r.reason, r.status, r.created_at, r.processed_at, r.processed_by,
-                   u.id as u_id, u.username, u.avatar_url, u.bio, u.created_at as u_created_at, u.is_admin as u_is_admin
+                   u.id as u_id, u.username, u.avatar_url, u.bio, u.created_at as u_created_at, u.is_admin as u_is_admin,
+                   reported.username as rep_username
             FROM reports r
             JOIN users u ON r.reporter_id = u.id
+            LEFT JOIN posts p ON r.post_id = p.id
+            LEFT JOIN comments c ON r.comment_id = c.id
+            LEFT JOIN users reported ON COALESCE(p.author_id, c.author_id) = reported.id
             WHERE {}
             ORDER BY r.created_at DESC
             LIMIT ? OFFSET ?
@@ -77,21 +81,26 @@ impl<'a> ReportRepository<'a> {
 
         let result: Vec<ReportWithDetails> = reports.into_iter().map(|r| {
             ReportWithDetails {
-                id: r.0,
+                id: r.0.clone(),
                 reporter: UserPublic {
-                    id: r.9,
-                    username: r.10,
-                    avatar_url: r.11,
-                    bio: r.12,
+                    id: r.9.clone(),
+                    username: r.10.clone(),
+                    avatar_url: r.11.clone(),
+                    bio: r.12.clone(),
                     is_admin: r.14,
-                    created_at: r.13,
+                    points: 0,
+                    level: 1,
+                    created_at: r.13.clone(),
                 },
-                post_id: r.2,
-                comment_id: r.3,
-                reason: r.4,
-                status: r.5,
-                created_at: r.6,
-                processed_at: r.7,
+                reporter_username: r.10.clone(),
+                reported_user_id: None,
+                reported_username: r.15,
+                post_id: r.2.clone(),
+                comment_id: r.3.clone(),
+                reason: r.4.clone(),
+                status: r.5.clone(),
+                created_at: r.6.clone(),
+                processed_at: r.7.clone(),
             }
         }).collect();
 

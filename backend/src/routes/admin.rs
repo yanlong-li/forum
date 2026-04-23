@@ -15,6 +15,8 @@ pub fn admin_routes() -> Router<Arc<AppState>> {
         .route("/users/{id}/status", patch(update_user_status))
         .route("/reports", get(list_reports))
         .route("/reports/{id}", patch(process_report))
+        .route("/posts/{id}/pin", patch(set_pin))
+        .route("/posts/{id}/feature", patch(set_featured))
 }
 
 async fn get_stats(
@@ -92,5 +94,43 @@ async fn process_report(
 
     Ok(Json(crate::models::response::MessageResponse {
         message: "Report processed".to_string()
+    }))
+}
+
+async fn set_pin(
+    State(state): State<Arc<AppState>>,
+    AuthenticatedUser(user): AuthenticatedUser,
+    Path(post_id): Path<String>,
+    Json(req): Json<serde_json::Value>,
+) -> Result<Json<crate::models::response::MessageResponse>> {
+    if !user.is_admin {
+        return Err(AppError::Forbidden("Admin access required".to_string()));
+    }
+
+    let is_pinned = req["is_pinned"].as_bool().unwrap_or(false);
+    let post_service = crate::services::PostService::new(&state.db);
+    post_service.set_pin_featured(&post_id, is_pinned, false, true).await?;
+
+    Ok(Json(crate::models::response::MessageResponse {
+        message: if is_pinned { "Post pinned" } else { "Post unpinned" }.to_string()
+    }))
+}
+
+async fn set_featured(
+    State(state): State<Arc<AppState>>,
+    AuthenticatedUser(user): AuthenticatedUser,
+    Path(post_id): Path<String>,
+    Json(req): Json<serde_json::Value>,
+) -> Result<Json<crate::models::response::MessageResponse>> {
+    if !user.is_admin {
+        return Err(AppError::Forbidden("Admin access required".to_string()));
+    }
+
+    let is_featured = req["is_featured"].as_bool().unwrap_or(false);
+    let post_service = crate::services::PostService::new(&state.db);
+    post_service.set_pin_featured(&post_id, false, is_featured, true).await?;
+
+    Ok(Json(crate::models::response::MessageResponse {
+        message: if is_featured { "Post featured" } else { "Post unfeatured" }.to_string()
     }))
 }

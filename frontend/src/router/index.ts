@@ -71,6 +71,48 @@ const router = createRouter({
       component: () => import('../views/admin/Dashboard.vue'),
       meta: { requiresAuth: true, requiresAdmin: true },
     },
+    {
+      path: '/admin/users',
+      name: 'admin-users',
+      component: () => import('../views/admin/AdminUsers.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
+    {
+      path: '/admin/reports',
+      name: 'admin-reports',
+      component: () => import('../views/admin/AdminReports.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
+    {
+      path: '/admin/announcements',
+      name: 'admin-announcements',
+      component: () => import('../views/admin/AdminAnnouncements.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: () => import('../views/Settings.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/settings/blocks',
+      name: 'blocked-users',
+      component: () => import('../views/BlockedUsers.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/drafts',
+      name: 'drafts',
+      component: () => import('../views/Drafts.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/settings/profile',
+      name: 'edit-profile',
+      component: () => import('../views/EditProfile.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
   scrollBehavior(_to, _from, savedPosition) {
     if (savedPosition) {

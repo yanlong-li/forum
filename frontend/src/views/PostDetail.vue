@@ -7,6 +7,11 @@ import { useToast } from '../composables/useToast'
 import { formatDistanceToNow } from '../utils/time'
 import CommentList from '../components/comment/CommentList.vue'
 import Loading from '../components/common/Loading.vue'
+import MarkdownRenderer from '../components/editor/MarkdownRenderer.vue'
+import MarkdownEditor from '../components/editor/MarkdownEditor.vue'
+import ReportModal from '../components/report/ReportModal.vue'
+import LevelBadge from '../components/user/LevelBadge.vue'
+import ShareButtons from '../components/common/ShareButtons.vue'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -17,6 +22,7 @@ const loading = ref(true)
 const error = ref('')
 const commentContent = ref('')
 const submitting = ref(false)
+const showReportModal = ref(false)
 
 async function fetchPost() {
   try {
@@ -65,6 +71,14 @@ async function handleBookmark() {
   }
 }
 
+function handleReport() {
+  if (!authStore.isAuthenticated) {
+    toast.info('Please login to report')
+    return
+  }
+  showReportModal.value = true
+}
+
 async function handleComment() {
   if (!commentContent.value.trim()) return
 
@@ -97,7 +111,7 @@ onMounted(() => {
       <RouterLink to="/" class="btn btn-primary mt-4">Go Home</RouterLink>
     </div>
 
-    <article v-else class="card p-8">
+    <article v-if="post" class="card p-8">
       <header class="mb-8">
         <div class="flex items-center space-x-4 mb-4">
           <RouterLink :to="`/profile/${post.author.username}`" class="flex-shrink-0">
@@ -122,9 +136,13 @@ onMounted(() => {
             >
               {{ post.author.username }}
             </RouterLink>
-            <p class="text-sm text-slate-500">
-              {{ formatDistanceToNow(new Date(post.created_at)) }}
-            </p>
+            <div class="flex items-center space-x-2">
+              <LevelBadge :level="post.author.level" :points="post.author.points" show-points />
+              <span class="text-slate-400">·</span>
+              <p class="text-sm text-slate-500">
+                {{ formatDistanceToNow(new Date(post.created_at)) }}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -143,7 +161,7 @@ onMounted(() => {
       </header>
 
       <div class="prose prose-slate max-w-none mb-8">
-        <p class="whitespace-pre-wrap">{{ post.content }}</p>
+        <MarkdownRenderer :content="post.content" />
       </div>
 
       <footer class="flex items-center space-x-6 border-t border-slate-200 pt-6">
@@ -169,6 +187,18 @@ onMounted(() => {
           <span>{{ post.is_bookmarked ? 'Bookmarked' : 'Bookmark' }}</span>
         </button>
 
+        <button
+          @click="handleReport"
+          class="flex items-center space-x-2 px-3 py-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span>Report</span>
+        </button>
+
+        <ShareButtons :title="post.title" />
+
         <div class="flex-1"></div>
 
         <span class="text-sm text-slate-500">
@@ -177,16 +207,16 @@ onMounted(() => {
       </footer>
     </article>
 
-    <section class="mt-8">
+    <section v-if="post" class="mt-8">
       <h2 class="text-xl font-semibold text-slate-900 mb-4">Comments</h2>
 
       <div v-if="authStore.isAuthenticated" class="card p-6 mb-6">
         <form @submit.prevent="handleComment">
-          <textarea
+          <MarkdownEditor
             v-model="commentContent"
-            class="input min-h-[100px] resize-none"
-            placeholder="Write a comment..."
-          ></textarea>
+            placeholder="Write a comment... (Supports Markdown, @mentions, #tags)"
+            min-height="100px"
+          />
           <div class="mt-4 flex justify-end">
             <button
               type="submit"
@@ -199,7 +229,14 @@ onMounted(() => {
         </form>
       </div>
 
-      <CommentList :post-id="post.id" />
+      <CommentList :post-id="post.id" :post-author-id="post.author_id" />
     </section>
+
+    <ReportModal
+      v-if="post"
+      :visible="showReportModal"
+      :post-id="post.id"
+      @close="showReportModal = false"
+    />
   </div>
 </template>

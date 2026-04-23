@@ -4,6 +4,9 @@ export interface User {
   email?: string
   avatar_url: string | null
   bio: string | null
+  level?: number
+  points?: number
+  is_admin?: boolean
   created_at: string
 }
 
@@ -26,6 +29,9 @@ export interface Post {
   comment_count: number
   is_bookmarked: boolean
   is_liked: boolean
+  is_pinned: boolean
+  is_featured: boolean
+  view_count: number
   created_at: string
   updated_at: string
 }
@@ -40,6 +46,9 @@ export interface PostSummary {
   like_count: number
   comment_count: number
   is_bookmarked: boolean
+  is_pinned: boolean
+  is_featured: boolean
+  view_count: number
   created_at: string
 }
 

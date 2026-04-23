@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import api from '../composables/useApi'
 import { useAuthStore } from '../stores/auth'
@@ -14,9 +14,14 @@ const toast = useToast()
 
 const profile = ref<any>(null)
 const posts = ref<any[]>([])
+const comments = ref<any[]>([])
+const followers = ref<any[]>([])
+const following = ref<any[]>([])
+const badges = ref<any[]>([])
 const loading = ref(true)
-const activeTab = ref<'posts' | 'followers' | 'following'>('posts')
+const activeTab = ref<'posts' | 'comments' | 'followers' | 'following' | 'badges'>('posts')
 const followLoading = ref(false)
+const listLoading = ref(false)
 
 async function fetchProfile() {
   try {
@@ -35,6 +40,56 @@ async function fetchPosts() {
     posts.value = response.data.posts
   } catch (err: any) {
     toast.error('Failed to load posts')
+  }
+}
+
+async function fetchFollowers() {
+  listLoading.value = true
+  try {
+    const response = await api.get(`/users/${route.params.username}/followers`)
+    followers.value = response.data.users
+  } catch (err: any) {
+    toast.error('Failed to load followers')
+  } finally {
+    listLoading.value = false
+  }
+}
+
+async function fetchFollowing() {
+  listLoading.value = true
+  try {
+    const response = await api.get(`/users/${route.params.username}/following`)
+    following.value = response.data.users
+  } catch (err: any) {
+    toast.error('Failed to load following')
+  } finally {
+    listLoading.value = false
+  }
+}
+
+async function fetchBadges() {
+  if (!profile.value) return
+  listLoading.value = true
+  try {
+    const response = await api.get(`/badges/user/${profile.value.id}`)
+    badges.value = response.data
+  } catch (err: any) {
+    toast.error('Failed to load badges')
+  } finally {
+    listLoading.value = false
+  }
+}
+
+async function fetchComments() {
+  if (!profile.value) return
+  listLoading.value = true
+  try {
+    const response = await api.get(`/comments/user/${profile.value.id}`, { params: { page: 1, limit: 20 } })
+    comments.value = response.data.comments
+  } catch (err: any) {
+    toast.error('Failed to load comments')
+  } finally {
+    listLoading.value = false
   }
 }
 
@@ -60,6 +115,28 @@ async function handleFollow() {
     followLoading.value = false
   }
 }
+
+watch(activeTab, (newTab) => {
+  if (newTab === 'followers' && followers.value.length === 0) {
+    fetchFollowers()
+  } else if (newTab === 'following' && following.value.length === 0) {
+    fetchFollowing()
+  } else if (newTab === 'badges' && badges.value.length === 0) {
+    fetchBadges()
+  } else if (newTab === 'comments' && comments.value.length === 0) {
+    fetchComments()
+  }
+})
+
+watch(() => route.params.username, () => {
+  fetchProfile()
+  fetchPosts()
+  activeTab.value = 'posts'
+  followers.value = []
+  following.value = []
+  badges.value = []
+  comments.value = []
+})
 
 onMounted(() => {
   fetchProfile()
@@ -136,6 +213,13 @@ onMounted(() => {
             Posts
           </button>
           <button
+            @click="activeTab = 'comments'"
+            class="py-4 px-1 border-b-2 font-medium text-sm transition-colors"
+            :class="activeTab === 'comments' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'"
+          >
+            Comments
+          </button>
+          <button
             @click="activeTab = 'followers'"
             class="py-4 px-1 border-b-2 font-medium text-sm transition-colors"
             :class="activeTab === 'followers' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'"
@@ -149,6 +233,13 @@ onMounted(() => {
           >
             Following
           </button>
+          <button
+            @click="activeTab = 'badges'"
+            class="py-4 px-1 border-b-2 font-medium text-sm transition-colors"
+            :class="activeTab === 'badges' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'"
+          >
+            Badges
+          </button>
         </nav>
       </div>
     </div>
@@ -161,12 +252,96 @@ onMounted(() => {
       </div>
     </div>
 
-    <div v-else-if="activeTab === 'followers'" class="card p-8 text-center text-slate-500">
-      Followers list coming soon.
+    <div v-else-if="activeTab === 'comments'" class="space-y-4">
+      <div v-if="comments.length === 0" class="card p-8 text-center text-slate-500">
+        No comments yet.
+      </div>
+      <div v-else class="card p-6" v-for="comment in comments" :key="comment.id">
+        <p class="text-slate-700 mb-2">{{ comment.content }}</p>
+        <RouterLink :to="`/post/${comment.post_id}`" class="text-sm text-primary hover:underline">
+          View post
+        </RouterLink>
+        <p class="text-xs text-slate-500 mt-1">{{ formatDate(new Date(comment.created_at)) }}</p>
+      </div>
     </div>
 
-    <div v-else class="card p-8 text-center text-slate-500">
-      Following list coming soon.
+    <div v-else-if="activeTab === 'followers'">
+      <Loading v-if="listLoading" />
+      <div v-else-if="followers.length === 0" class="card p-8 text-center text-slate-500">
+        No followers yet.
+      </div>
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div v-for="user in followers" :key="user.id" class="card p-4 flex items-center space-x-4">
+          <RouterLink :to="`/profile/${user.username}`">
+            <img
+              v-if="user.avatar_url"
+              :src="user.avatar_url"
+              :alt="user.username"
+              class="w-12 h-12 rounded-full object-cover"
+            />
+            <div
+              v-else
+              class="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-medium"
+            >
+              {{ user.username.charAt(0).toUpperCase() }}
+            </div>
+          </RouterLink>
+          <div class="flex-1 min-w-0">
+            <RouterLink :to="`/profile/${user.username}`" class="font-medium text-slate-900 hover:text-primary">
+              {{ user.username }}
+            </RouterLink>
+            <p v-if="user.bio" class="text-sm text-slate-500 truncate">{{ user.bio }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-else-if="activeTab === 'following'">
+      <Loading v-if="listLoading" />
+      <div v-else-if="following.length === 0" class="card p-8 text-center text-slate-500">
+        Not following anyone yet.
+      </div>
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div v-for="user in following" :key="user.id" class="card p-4 flex items-center space-x-4">
+          <RouterLink :to="`/profile/${user.username}`">
+            <img
+              v-if="user.avatar_url"
+              :src="user.avatar_url"
+              :alt="user.username"
+              class="w-12 h-12 rounded-full object-cover"
+            />
+            <div
+              v-else
+              class="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-medium"
+            >
+              {{ user.username.charAt(0).toUpperCase() }}
+            </div>
+          </RouterLink>
+          <div class="flex-1 min-w-0">
+            <RouterLink :to="`/profile/${user.username}`" class="font-medium text-slate-900 hover:text-primary">
+              {{ user.username }}
+            </RouterLink>
+            <p v-if="user.bio" class="text-sm text-slate-500 truncate">{{ user.bio }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-else-if="activeTab === 'badges'">
+      <Loading v-if="listLoading" />
+      <div v-else-if="badges.length === 0" class="card p-8 text-center text-slate-500">
+        No badges earned yet.
+      </div>
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div v-for="badge in badges" :key="badge.id" class="card p-6 text-center">
+          <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-3xl">
+            {{ badge.icon || '🏅' }}
+          </div>
+          <h3 class="font-semibold text-slate-900">{{ badge.name }}</h3>
+          <p v-if="badge.description" class="text-sm text-slate-500 mt-1">{{ badge.description }}</p>
+          <p class="text-xs text-slate-400 mt-2">Earned {{ formatDate(new Date(badge.earned_at)) }}</p>
+        </div>
+      </div>
     </div>
   </div>
 </template>

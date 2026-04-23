@@ -219,7 +219,7 @@ impl<'a> UserRepository<'a> {
         let users = if let Some(search) = search {
             sqlx::query_as::<_, UserPublic>(
                 r#"
-                SELECT id, username, avatar_url, bio, is_admin, created_at
+                SELECT id, username, avatar_url, bio, is_admin, points, level, created_at
                 FROM users
                 WHERE username LIKE ? OR email LIKE ?
                 ORDER BY created_at DESC
@@ -235,7 +235,7 @@ impl<'a> UserRepository<'a> {
         } else {
             sqlx::query_as::<_, UserPublic>(
                 r#"
-                SELECT id, username, avatar_url, bio, is_admin, created_at
+                SELECT id, username, avatar_url, bio, is_admin, points, level, created_at
                 FROM users
                 ORDER BY created_at DESC
                 LIMIT ? OFFSET ?

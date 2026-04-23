@@ -62,6 +62,8 @@ impl<'a> FollowService<'a> {
                     avatar_url: user.avatar_url.clone(),
                     bio: user.bio.clone(),
                     is_admin: user.is_admin,
+                    points: user.points,
+                    level: user.level,
                     created_at: user.created_at.clone(),
                 });
             }
@@ -90,6 +92,8 @@ impl<'a> FollowService<'a> {
                     avatar_url: user.avatar_url.clone(),
                     bio: user.bio.clone(),
                     is_admin: user.is_admin,
+                    points: user.points,
+                    level: user.level,
                     created_at: user.created_at.clone(),
                 });
             }
