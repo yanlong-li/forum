@@ -174,3 +174,8 @@
 *.lz
 *.lzma
 *.iso
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
