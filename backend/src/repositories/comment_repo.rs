@@ -1,7 +1,29 @@
 use sqlx::SqlitePool;
+use sqlx::FromRow;
 use crate::error::{AppError, Result};
 use crate::models::comment::{Comment, CommentWithAuthor};
 use crate::models::user::UserPublic;
+
+#[derive(Debug, FromRow)]
+struct CommentRow {
+    id: String,
+    post_id: String,
+    author_id: String,
+    parent_id: Option<String>,
+    root_parent_id: Option<String>,
+    content: String,
+    is_deleted: bool,
+    created_at: String,
+    updated_at: String,
+    u_id: String,
+    username: String,
+    avatar_url: Option<String>,
+    bio: Option<String>,
+    u_created_at: String,
+    like_count: i64,
+    reply_count: i64,
+    u_is_admin: bool,
+}
 
 pub struct CommentRepository<'a> {
     pool: &'a SqlitePool,
@@ -92,9 +114,9 @@ impl<'a> CommentRepository<'a> {
     pub async fn list_by_post(&self, post_id: &str, page: i64, limit: i64) -> Result<(Vec<CommentWithAuthor>, i64)> {
         let offset = (page - 1) * limit;
 
-        let comments: Vec<(String, String, String, Option<String>, String, bool, String, String, String, String, Option<String>, Option<String>, String, i64, i64, bool)> = sqlx::query_as(
+        let comments: Vec<CommentRow> = sqlx::query_as(
             r#"
-            SELECT c.id, c.post_id, c.author_id, c.parent_id, c.content, c.is_deleted, c.created_at, c.updated_at,
+            SELECT c.id, c.post_id, c.author_id, c.parent_id, c.root_parent_id, c.content, c.is_deleted, c.created_at, c.updated_at,
                    u.id as u_id, u.username, u.avatar_url, u.bio, u.created_at as u_created_at,
                    (SELECT COUNT(*) FROM votes WHERE comment_id = c.id AND value = 1) as like_count,
                    (SELECT COUNT(*) FROM comments WHERE parent_id = c.id AND is_deleted = 0) as reply_count,
@@ -121,28 +143,29 @@ impl<'a> CommentRepository<'a> {
 
         let result: Vec<CommentWithAuthor> = comments.into_iter().map(|c| {
             CommentWithAuthor {
-                id: c.0,
-                post_id: c.1,
-                author_id: c.2,
+                id: c.id,
+                post_id: c.post_id,
+                author_id: c.author_id,
                 author: UserPublic {
-                    id: c.8,
-                    username: c.9,
-                    avatar_url: c.10,
-                    bio: c.11,
-                    is_admin: c.15,
+                    id: c.u_id,
+                    username: c.username,
+                    avatar_url: c.avatar_url,
+                    bio: c.bio,
+                    is_admin: c.u_is_admin,
                     points: 0,
                     level: 1,
-                    created_at: c.12,
+                    created_at: c.u_created_at,
                 },
-                parent_id: c.3,
-                content: c.4,
-                is_deleted: c.5,
-                like_count: c.13,
+                parent_id: c.parent_id,
+                root_parent_id: c.root_parent_id,
+                content: c.content,
+                is_deleted: c.is_deleted,
+                like_count: c.like_count,
                 is_liked: false,
-                reply_count: c.14,
+                reply_count: c.reply_count,
                 replies: Vec::new(),
-                created_at: c.6,
-                updated_at: c.7,
+                created_at: c.created_at,
+                updated_at: c.updated_at,
             }
         }).collect();
 
@@ -150,9 +173,9 @@ impl<'a> CommentRepository<'a> {
     }
 
     pub async fn list_replies(&self, parent_id: &str) -> Result<Vec<CommentWithAuthor>> {
-        let comments: Vec<(String, String, String, Option<String>, String, bool, String, String, String, String, Option<String>, Option<String>, String, i64, i64, bool)> = sqlx::query_as(
+        let comments: Vec<CommentRow> = sqlx::query_as(
             r#"
-            SELECT c.id, c.post_id, c.author_id, c.parent_id, c.content, c.is_deleted, c.created_at, c.updated_at,
+            SELECT c.id, c.post_id, c.author_id, c.parent_id, c.root_parent_id, c.content, c.is_deleted, c.created_at, c.updated_at,
                    u.id as u_id, u.username, u.avatar_url, u.bio, u.created_at as u_created_at,
                    (SELECT COUNT(*) FROM votes WHERE comment_id = c.id AND value = 1) as like_count,
                    (SELECT COUNT(*) FROM comments WHERE parent_id = c.id AND is_deleted = 0) as reply_count,
@@ -169,28 +192,29 @@ impl<'a> CommentRepository<'a> {
 
         let result: Vec<CommentWithAuthor> = comments.into_iter().map(|c| {
             CommentWithAuthor {
-                id: c.0,
-                post_id: c.1,
-                author_id: c.2,
+                id: c.id,
+                post_id: c.post_id,
+                author_id: c.author_id,
                 author: UserPublic {
-                    id: c.8,
-                    username: c.9,
-                    avatar_url: c.10,
-                    bio: c.11,
-                    is_admin: c.15,
+                    id: c.u_id,
+                    username: c.username,
+                    avatar_url: c.avatar_url,
+                    bio: c.bio,
+                    is_admin: c.u_is_admin,
                     points: 0,
                     level: 1,
-                    created_at: c.12,
+                    created_at: c.u_created_at,
                 },
-                parent_id: c.3,
-                content: c.4,
-                is_deleted: c.5,
-                like_count: c.13,
+                parent_id: c.parent_id,
+                root_parent_id: c.root_parent_id,
+                content: c.content,
+                is_deleted: c.is_deleted,
+                like_count: c.like_count,
                 is_liked: false,
-                reply_count: c.14,
+                reply_count: c.reply_count,
                 replies: Vec::new(),
-                created_at: c.6,
-                updated_at: c.7,
+                created_at: c.created_at,
+                updated_at: c.updated_at,
             }
         }).collect();
 
@@ -205,7 +229,7 @@ impl<'a> CommentRepository<'a> {
         let placeholders: Vec<String> = parent_ids.iter().map(|_| "?".to_string()).collect();
         let query = format!(
             r#"
-            SELECT c.id, c.post_id, c.author_id, c.parent_id, c.content, c.is_deleted, c.created_at, c.updated_at,
+            SELECT c.id, c.post_id, c.author_id, c.parent_id, c.root_parent_id, c.content, c.is_deleted, c.created_at, c.updated_at,
                    u.id as u_id, u.username, u.avatar_url, u.bio, u.created_at as u_created_at,
                    (SELECT COUNT(*) FROM votes WHERE comment_id = c.id AND value = 1) as like_count,
                    (SELECT COUNT(*) FROM comments WHERE parent_id = c.id AND is_deleted = 0) as reply_count,
@@ -218,7 +242,7 @@ impl<'a> CommentRepository<'a> {
             placeholders.join(",")
         );
 
-        let mut query_builder = sqlx::query_as::<_, (String, String, String, Option<String>, String, bool, String, String, String, String, Option<String>, Option<String>, String, i64, i64, bool)>(&query);
+        let mut query_builder = sqlx::query_as::<_, CommentRow>(&query);
         for id in parent_ids {
             query_builder = query_builder.bind(id);
         }
@@ -227,28 +251,88 @@ impl<'a> CommentRepository<'a> {
 
         let result: Vec<CommentWithAuthor> = comments.into_iter().map(|c| {
             CommentWithAuthor {
-                id: c.0,
-                post_id: c.1,
-                author_id: c.2,
+                id: c.id,
+                post_id: c.post_id,
+                author_id: c.author_id,
                 author: UserPublic {
-                    id: c.8,
-                    username: c.9,
-                    avatar_url: c.10,
-                    bio: c.11,
-                    is_admin: c.15,
+                    id: c.u_id,
+                    username: c.username,
+                    avatar_url: c.avatar_url,
+                    bio: c.bio,
+                    is_admin: c.u_is_admin,
                     points: 0,
                     level: 1,
-                    created_at: c.12,
+                    created_at: c.u_created_at,
                 },
-                parent_id: c.3,
-                content: c.4,
-                is_deleted: c.5,
-                like_count: c.13,
+                parent_id: c.parent_id,
+                root_parent_id: c.root_parent_id,
+                content: c.content,
+                is_deleted: c.is_deleted,
+                like_count: c.like_count,
                 is_liked: false,
-                reply_count: c.14,
+                reply_count: c.reply_count,
                 replies: Vec::new(),
-                created_at: c.6,
-                updated_at: c.7,
+                created_at: c.created_at,
+                updated_at: c.updated_at,
+            }
+        }).collect();
+
+        Ok(result)
+    }
+
+    pub async fn list_comments_by_root_parent_ids(&self, root_parent_ids: &[String]) -> Result<Vec<CommentWithAuthor>> {
+        if root_parent_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let placeholders: Vec<String> = root_parent_ids.iter().map(|_| "?".to_string()).collect();
+        let query = format!(
+            r#"
+            SELECT c.id, c.post_id, c.author_id, c.parent_id, c.root_parent_id, c.content, c.is_deleted, c.created_at, c.updated_at,
+                   u.id as u_id, u.username, u.avatar_url, u.bio, u.created_at as u_created_at,
+                   (SELECT COUNT(*) FROM votes WHERE comment_id = c.id AND value = 1) as like_count,
+                   (SELECT COUNT(*) FROM comments WHERE parent_id = c.id AND is_deleted = 0) as reply_count,
+                   u.is_admin as u_is_admin
+            FROM comments c
+            JOIN users u ON c.author_id = u.id
+            WHERE c.root_parent_id IN ({}) AND c.is_deleted = 0
+            ORDER BY c.created_at ASC
+            "#,
+            placeholders.join(",")
+        );
+
+        let mut query_builder = sqlx::query_as::<_, CommentRow>(&query);
+        for id in root_parent_ids {
+            query_builder = query_builder.bind(id);
+        }
+
+        let comments = query_builder.fetch_all(self.pool).await?;
+
+        let result: Vec<CommentWithAuthor> = comments.into_iter().map(|c| {
+            CommentWithAuthor {
+                id: c.id,
+                post_id: c.post_id,
+                author_id: c.author_id,
+                author: UserPublic {
+                    id: c.u_id,
+                    username: c.username,
+                    avatar_url: c.avatar_url,
+                    bio: c.bio,
+                    is_admin: c.u_is_admin,
+                    points: 0,
+                    level: 1,
+                    created_at: c.u_created_at,
+                },
+                parent_id: c.parent_id,
+                root_parent_id: c.root_parent_id,
+                content: c.content,
+                is_deleted: c.is_deleted,
+                like_count: c.like_count,
+                is_liked: false,
+                reply_count: c.reply_count,
+                replies: Vec::new(),
+                created_at: c.created_at,
+                updated_at: c.updated_at,
             }
         }).collect();
 
@@ -258,9 +342,9 @@ impl<'a> CommentRepository<'a> {
     pub async fn list_by_author(&self, author_id: &str, page: i64, limit: i64) -> Result<(Vec<CommentWithAuthor>, i64)> {
         let offset = (page - 1) * limit;
 
-        let comments: Vec<(String, String, String, Option<String>, String, bool, String, String, String, String, Option<String>, Option<String>, String, i64, i64, bool)> = sqlx::query_as(
+        let comments: Vec<CommentRow> = sqlx::query_as(
             r#"
-            SELECT c.id, c.post_id, c.author_id, c.parent_id, c.content, c.is_deleted, c.created_at, c.updated_at,
+            SELECT c.id, c.post_id, c.author_id, c.parent_id, c.root_parent_id, c.content, c.is_deleted, c.created_at, c.updated_at,
                    u.id as u_id, u.username, u.avatar_url, u.bio, u.created_at as u_created_at,
                    (SELECT COUNT(*) FROM votes WHERE comment_id = c.id AND value = 1) as like_count,
                    (SELECT COUNT(*) FROM comments WHERE parent_id = c.id AND is_deleted = 0) as reply_count,
@@ -287,28 +371,29 @@ impl<'a> CommentRepository<'a> {
 
         let result: Vec<CommentWithAuthor> = comments.into_iter().map(|c| {
             CommentWithAuthor {
-                id: c.0,
-                post_id: c.1,
-                author_id: c.2,
+                id: c.id,
+                post_id: c.post_id,
+                author_id: c.author_id,
                 author: UserPublic {
-                    id: c.8,
-                    username: c.9,
-                    avatar_url: c.10,
-                    bio: c.11,
-                    is_admin: c.15,
+                    id: c.u_id,
+                    username: c.username,
+                    avatar_url: c.avatar_url,
+                    bio: c.bio,
+                    is_admin: c.u_is_admin,
                     points: 0,
                     level: 1,
-                    created_at: c.12,
+                    created_at: c.u_created_at,
                 },
-                parent_id: c.3,
-                content: c.4,
-                is_deleted: c.5,
-                like_count: c.13,
+                parent_id: c.parent_id,
+                root_parent_id: c.root_parent_id,
+                content: c.content,
+                is_deleted: c.is_deleted,
+                like_count: c.like_count,
                 is_liked: false,
-                reply_count: c.14,
+                reply_count: c.reply_count,
                 replies: Vec::new(),
-                created_at: c.6,
-                updated_at: c.7,
+                created_at: c.created_at,
+                updated_at: c.updated_at,
             }
         }).collect();
 

@@ -23,6 +23,7 @@ pub struct CommentWithAuthor {
     pub author_id: String,
     pub author: UserPublic,
     pub parent_id: Option<String>,
+    pub root_parent_id: Option<String>,
     pub content: String,
     pub is_deleted: bool,
     pub like_count: i64,
