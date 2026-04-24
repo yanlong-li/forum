@@ -32,23 +32,23 @@ impl<'a> CommentService<'a> {
         let post = post_repo.find_by_id(post_id).await?
             .ok_or_else(|| AppError::NotFound("Post not found".to_string()))?;
 
-        let root_parent_id = if let Some(parent_id) = &req.parent_id {
+        let (effective_parent_id, root_parent_id) = if let Some(parent_id) = &req.parent_id {
             let parent = comment_repo.find_by_id(parent_id).await?
                 .ok_or_else(|| AppError::NotFound("Parent comment not found".to_string()))?;
             if parent.post_id != post_id {
                 return Err(AppError::ValidationError("Parent comment does not belong to this post".to_string()));
             }
             if parent.parent_id.is_none() {
-                Some(parent.id.clone())
+                (req.parent_id.clone(), Some(parent.id.clone()))
             } else {
-                parent.root_parent_id.clone()
+                (parent.root_parent_id.clone(), parent.root_parent_id.clone())
             }
         } else {
-            None
+            (None, None)
         };
 
         let comment_id = Uuid::new_v4().to_string();
-        let comment = comment_repo.create(&comment_id, post_id, author_id, req.parent_id.as_deref(), &req.content, root_parent_id.as_deref()).await?;
+        let comment = comment_repo.create(&comment_id, post_id, author_id, effective_parent_id.as_deref(), &req.content, root_parent_id.as_deref()).await?;
 
         if post.author_id != author_id {
             let notification_repo = NotificationRepository::new(self.pool);
