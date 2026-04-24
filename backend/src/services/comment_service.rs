@@ -1,6 +1,6 @@
 use sqlx::SqlitePool;
 use crate::error::{AppError, Result};
-use crate::models::comment::{Comment, CreateCommentRequest, UpdateCommentRequest, CommentListResponse};
+use crate::models::comment::{Comment, CommentWithAuthor, CreateCommentRequest, UpdateCommentRequest, CommentListResponse};
 use crate::models::response::MessageResponse;
 use crate::repositories::{CommentRepository, PostRepository, NotificationRepository};
 use crate::services::utils::extract_mentions;
@@ -32,16 +32,23 @@ impl<'a> CommentService<'a> {
         let post = post_repo.find_by_id(post_id).await?
             .ok_or_else(|| AppError::NotFound("Post not found".to_string()))?;
 
-        if let Some(parent_id) = &req.parent_id {
+        let root_parent_id = if let Some(parent_id) = &req.parent_id {
             let parent = comment_repo.find_by_id(parent_id).await?
                 .ok_or_else(|| AppError::NotFound("Parent comment not found".to_string()))?;
             if parent.post_id != post_id {
                 return Err(AppError::ValidationError("Parent comment does not belong to this post".to_string()));
             }
-        }
+            if parent.parent_id.is_none() {
+                Some(parent.id.clone())
+            } else {
+                parent.root_parent_id.clone()
+            }
+        } else {
+            None
+        };
 
         let comment_id = Uuid::new_v4().to_string();
-        let comment = comment_repo.create(&comment_id, post_id, author_id, req.parent_id.as_deref(), &req.content).await?;
+        let comment = comment_repo.create(&comment_id, post_id, author_id, req.parent_id.as_deref(), &req.content, root_parent_id.as_deref()).await?;
 
         if post.author_id != author_id {
             let notification_repo = NotificationRepository::new(self.pool);
@@ -100,13 +107,30 @@ impl<'a> CommentService<'a> {
 
     pub async fn list_comments(&self, post_id: &str, page: i64, limit: i64) -> Result<CommentListResponse> {
         let comment_repo = CommentRepository::new(self.pool);
-        let (comments, total) = comment_repo.list_by_post(post_id, page, limit).await?;
+        let (first_level_comments, total) = comment_repo.list_by_post(post_id, page, limit).await?;
+
+        if first_level_comments.is_empty() {
+            return Ok(CommentListResponse {
+                comments: Vec::new(),
+                total,
+                page,
+                limit,
+            });
+        }
+
+        let first_level_ids: Vec<String> = first_level_comments.iter().map(|c| c.id.clone()).collect();
+        let second_level_comments = comment_repo.list_comments_by_parent_ids(&first_level_ids).await?;
 
         let mut result = Vec::new();
-        for mut comment in comments {
-            let replies = comment_repo.list_replies(&comment.id).await?;
-            comment.reply_count = replies.len() as i64;
-            result.push(comment);
+        for mut first_level in first_level_comments {
+            let replies: Vec<CommentWithAuthor> = second_level_comments
+                .iter()
+                .filter(|c| c.parent_id.as_ref() == Some(&first_level.id))
+                .cloned()
+                .collect();
+            first_level.reply_count = replies.len() as i64;
+            first_level.replies = replies;
+            result.push(first_level);
         }
 
         Ok(CommentListResponse {

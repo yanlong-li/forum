@@ -157,6 +157,7 @@ onMounted(() => {
           :src="profile.avatar_url"
           :alt="profile.username"
           class="w-24 h-24 rounded-full object-cover"
+          loading="lazy"
         />
         <div
           v-else
@@ -267,7 +268,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <div v-else-if="activeTab === 'followers'">
+      <div v-else-if="activeTab === 'followers'">
       <Loading v-if="listLoading" />
       <div v-else-if="followers.length === 0" class="card p-8 text-center text-slate-500">
         {{ t('user.noFollowersYet') }}
@@ -280,6 +281,7 @@ onMounted(() => {
               :src="user.avatar_url"
               :alt="user.username"
               class="w-12 h-12 rounded-full object-cover"
+              loading="lazy"
             />
             <div
               v-else
@@ -298,7 +300,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <div v-else-if="activeTab === 'following'">
+      <div v-else-if="activeTab === 'following'">
       <Loading v-if="listLoading" />
       <div v-else-if="following.length === 0" class="card p-8 text-center text-slate-500">
         {{ t('user.notFollowingAnyoneYet') }}
@@ -311,6 +313,7 @@ onMounted(() => {
               :src="user.avatar_url"
               :alt="user.username"
               class="w-12 h-12 rounded-full object-cover"
+              loading="lazy"
             />
             <div
               v-else

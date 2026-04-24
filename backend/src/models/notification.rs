@@ -7,6 +7,7 @@ use crate::models::user::UserPublic;
 pub struct Notification {
     pub id: String,
     pub user_id: String,
+    #[sqlx(rename = "type")]
     pub notification_type: String,
     pub actor_id: String,
     pub post_id: Option<String>,

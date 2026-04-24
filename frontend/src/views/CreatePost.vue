@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import api from '../composables/useApi'
 import { useToast } from '../composables/useToast'
+import { useDraft } from '../composables/useDraft'
 import MarkdownEditor from '../components/editor/MarkdownEditor.vue'
 
 const router = useRouter()
@@ -15,6 +16,12 @@ const content = ref('')
 const tagInput = ref('')
 const tags = ref<string[]>([])
 const submitting = ref(false)
+const showDraftModal = ref(false)
+const draftLastSaved = ref<string>('')
+
+const { saveDraft, loadDraft, clearDraft, getTimeSinceLastSaved, AUTO_SAVE_INTERVAL } = useDraft()
+
+let autoSaveTimer: ReturnType<typeof setInterval> | null = null
 
 function addTag() {
   const tag = tagInput.value.trim().toLowerCase()
@@ -49,6 +56,7 @@ async function handleSubmit() {
       content: content.value,
       tags: tags.value,
     })
+    clearDraft()
     toast.success(t('error.posts.createSuccess'))
     router.push(`/post/${response.data.id}`)
   } catch (err: any) {
@@ -57,11 +65,90 @@ async function handleSubmit() {
     submitting.value = false
   }
 }
+
+function handleSaveDraft() {
+  if (title.value || content.value || tags.value.length) {
+    saveDraft({
+      title: title.value,
+      content: content.value,
+      tags: tags.value,
+      updatedAt: Date.now(),
+    })
+    draftLastSaved.value = getTimeSinceLastSaved()
+    toast.info('Draft saved')
+  }
+}
+
+function restoreDraft() {
+  const draft = loadDraft()
+  if (draft) {
+    title.value = draft.title
+    content.value = draft.content
+    tags.value = draft.tags || []
+    showDraftModal.value = false
+    toast.success('Draft restored')
+  }
+}
+
+function discardDraft() {
+  clearDraft()
+  showDraftModal.value = false
+  toast.info('Draft discarded')
+}
+
+function setupAutoSave() {
+  if (autoSaveTimer) {
+    clearInterval(autoSaveTimer)
+  }
+
+  autoSaveTimer = setInterval(() => {
+    if (title.value || content.value || tags.value.length) {
+      saveDraft({
+        title: title.value,
+        content: content.value,
+        tags: tags.value,
+        updatedAt: Date.now(),
+      })
+      draftLastSaved.value = getTimeSinceLastSaved()
+    }
+  }, AUTO_SAVE_INTERVAL)
+}
+
+watch([title, content, tags], () => {
+  if (title.value || content.value || tags.value.length) {
+    draftLastSaved.value = 'Unsaved'
+  }
+})
+
+onMounted(() => {
+  const draft = loadDraft()
+  if (draft) {
+    showDraftModal.value = true
+  }
+  setupAutoSave()
+})
+
+onUnmounted(() => {
+  if (autoSaveTimer) {
+    clearInterval(autoSaveTimer)
+  }
+})
 </script>
 
 <template>
   <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <h1 class="text-2xl font-bold text-slate-900 mb-8">{{ t('post.createNewPost') }}</h1>
+    <div class="flex items-center justify-between mb-8">
+      <h1 class="text-2xl font-bold text-slate-900">{{ t('post.createNewPost') }}</h1>
+      <div v-if="draftLastSaved" class="flex items-center space-x-2 text-sm text-slate-500">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        <span>Draft saved {{ draftLastSaved }}</span>
+        <button @click="handleSaveDraft" class="text-primary hover:text-primary-hover">
+          Save now
+        </button>
+      </div>
+    </div>
 
     <form @submit.prevent="handleSubmit" class="space-y-6">
       <div>
@@ -146,5 +233,32 @@ async function handleSubmit() {
         </button>
       </div>
     </form>
+
+    <div
+      v-if="showDraftModal"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      @click.self="showDraftModal = false"
+    >
+      <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+        <h3 class="text-lg font-semibold text-slate-900 mb-2">Restore previous draft?</h3>
+        <p class="text-slate-600 mb-6">
+          You have an unsaved draft from a previous session. Would you like to restore it?
+        </p>
+        <div class="flex space-x-4 justify-end">
+          <button
+            @click="discardDraft"
+            class="btn btn-secondary"
+          >
+            Discard
+          </button>
+          <button
+            @click="restoreDraft"
+            class="btn btn-primary"
+          >
+            Restore
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

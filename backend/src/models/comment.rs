@@ -9,6 +9,7 @@ pub struct Comment {
     pub post_id: String,
     pub author_id: String,
     pub parent_id: Option<String>,
+    pub root_parent_id: Option<String>,
     pub content: String,
     pub is_deleted: bool,
     pub created_at: String,
@@ -27,7 +28,10 @@ pub struct CommentWithAuthor {
     pub like_count: i64,
     #[serde(default)]
     pub is_liked: bool,
+    #[serde(default)]
     pub reply_count: i64,
+    #[serde(default)]
+    pub replies: Vec<CommentWithAuthor>,
     pub created_at: String,
     pub updated_at: String,
 }

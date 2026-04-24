@@ -82,6 +82,7 @@ onMounted(() => {
               :src="notification.actor.avatar_url"
               :alt="notification.actor.username"
               class="w-10 h-10 rounded-full object-cover"
+              loading="lazy"
             />
             <div
               v-else

@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import api from '../composables/useApi'
 import PostCard from '../components/post/PostCard.vue'
 import Loading from '../components/common/Loading.vue'
+import { usePrefetch } from '../composables/usePrefetch'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -14,8 +15,19 @@ const tag = ref<any>(null)
 const loading = ref(true)
 const page = ref(1)
 const hasMore = ref(true)
+const { getPrefetchedData, hasPrefetchedData } = usePrefetch()
 
 async function fetchTagPosts() {
+  const cacheKey = `tag-${route.params.name}`
+
+  if (page.value === 1 && hasPrefetchedData(cacheKey)) {
+    const data = getPrefetchedData(cacheKey)
+    posts.value = data.posts
+    hasMore.value = posts.value.length < data.total
+    loading.value = false
+    return
+  }
+
   try {
     const [postsResponse, tagResponse] = await Promise.all([
       api.get(`/tags/${route.params.name}/posts`, { params: { page: page.value, limit: 20 } }),

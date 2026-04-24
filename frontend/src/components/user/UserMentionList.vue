@@ -95,6 +95,7 @@ onUnmounted(() => {
           v-if="user.avatar_url"
           :src="user.avatar_url"
           class="w-8 h-8 rounded-full object-cover"
+          loading="lazy"
         />
         <div
           v-else

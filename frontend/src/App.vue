@@ -1,15 +1,29 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from './stores/auth'
+import { useGlobalWebSocket } from './composables/useGlobalWebSocket'
+import { setupGlobalShortcuts } from './composables/useKeyboardShortcuts'
 import Navbar from './components/layout/Navbar.vue'
 import Toast from './components/common/Toast.vue'
 import AnnouncementBanner from './components/common/AnnouncementBanner.vue'
 
+const router = useRouter()
 const authStore = useAuthStore()
+const { connect, disconnect } = useGlobalWebSocket()
 
 onMounted(() => {
   authStore.checkAuth()
+  setupGlobalShortcuts(router)
 })
+
+watch(() => authStore.isAuthenticated, (isAuth) => {
+  if (isAuth) {
+    connect()
+  } else {
+    disconnect()
+  }
+}, { immediate: false })
 </script>
 
 <template>

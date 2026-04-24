@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
 import MarkdownRenderer from './MarkdownRenderer.vue'
+import UserMentionList from '../user/UserMentionList.vue'
 
 const props = defineProps<{
   modelValue: string
@@ -15,6 +16,11 @@ const emit = defineEmits<{
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const isPreview = ref(false)
 const localValue = ref(props.modelValue)
+
+const showMentionPopup = ref(false)
+const mentionQuery = ref('')
+const mentionPosition = ref({ top: 0, left: 0 })
+const mentionStart = ref(0)
 
 watch(() => props.modelValue, (newVal) => {
   localValue.value = newVal
@@ -46,7 +52,89 @@ function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Tab') {
     e.preventDefault()
     insertText('  ')
+    return
   }
+
+  if (showMentionPopup.value) {
+    if (['ArrowUp', 'ArrowDown', 'Enter', 'Escape'].includes(e.key)) {
+      return
+    }
+  }
+
+  if (e.key === '@') {
+    const textarea = textareaRef.value
+    if (!textarea) return
+    const cursorPos = textarea.selectionStart
+    const textBeforeCursor = localValue.value.substring(0, cursorPos)
+
+    const lastSpaceOrNewline = Math.max(
+      textBeforeCursor.lastIndexOf(' '),
+      textBeforeCursor.lastIndexOf('\n')
+    )
+    const textAfterSpace = textBeforeCursor.substring(lastSpaceOrNewline + 1)
+
+    if (!textAfterSpace.includes('@')) {
+      showMentionPopup.value = true
+      mentionQuery.value = ''
+      mentionStart.value = cursorPos
+
+      nextTick(() => {
+        const rect = textarea.getBoundingClientRect()
+        mentionPosition.value = {
+          top: rect.top + 60,
+          left: rect.left + 20
+        }
+      })
+    }
+  }
+}
+
+function handleInput(e: Event) {
+  const target = e.target as HTMLTextAreaElement
+  const cursorPos = target.selectionStart
+  localValue.value = target.value
+  emit('update:modelValue', localValue.value)
+
+  if (showMentionPopup.value) {
+    const textBeforeCursor = localValue.value.substring(0, cursorPos)
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@')
+
+    if (lastAtIndex !== -1) {
+      const textAfterAt = textBeforeCursor.substring(lastAtIndex + 1)
+      if (!textAfterAt.includes(' ') && !textAfterAt.includes('\n')) {
+        mentionQuery.value = textAfterAt
+        mentionStart.value = lastAtIndex
+      } else {
+        showMentionPopup.value = false
+      }
+    } else {
+      showMentionPopup.value = false
+    }
+  }
+}
+
+function handleMentionSelect(username: string) {
+  const textarea = textareaRef.value
+  if (!textarea) return
+
+  const beforeMention = localValue.value.substring(0, mentionStart.value)
+  const afterMention = localValue.value.substring(textarea.selectionStart)
+  const mention = `@${username} `
+
+  localValue.value = beforeMention + mention + afterMention
+  emit('update:modelValue', localValue.value)
+
+  showMentionPopup.value = false
+
+  nextTick(() => {
+    const newCursorPos = mentionStart.value + mention.length
+    textarea.focus()
+    textarea.setSelectionRange(newCursorPos, newCursorPos)
+  })
+}
+
+function handleMentionClose() {
+  showMentionPopup.value = false
 }
 
 const insertActions: { icon: string; title: string; action: () => void }[] = [
@@ -63,12 +151,6 @@ const insertActions: { icon: string; title: string; action: () => void }[] = [
   { icon: '🖼', title: 'Image', action: () => insertText('![alt](', ')') },
   { icon: '---', title: 'Divider', action: () => insertText('\n---\n', '') },
 ]
-
-function handleInput(e: Event) {
-  const target = e.target as HTMLTextAreaElement
-  localValue.value = target.value
-  emit('update:modelValue', localValue.value)
-}
 </script>
 
 <template>
@@ -84,6 +166,15 @@ function handleInput(e: Event) {
           :title="action.title"
         >
           {{ action.icon }}
+        </button>
+        <span class="text-slate-400 mx-1">|</span>
+        <button
+          type="button"
+          @click="insertText('@')"
+          class="w-8 h-8 flex items-center justify-center rounded text-slate-600 hover:bg-slate-200 hover:text-slate-900 transition-colors"
+          title="@Mention"
+        >
+          @
         </button>
       </div>
 
@@ -127,6 +218,14 @@ function handleInput(e: Event) {
         <MarkdownRenderer v-if="localValue" :content="localValue" />
         <p v-else class="text-slate-400 italic">Nothing to preview</p>
       </div>
+
+      <UserMentionList
+        :visible="showMentionPopup"
+        :query="mentionQuery"
+        :position="mentionPosition"
+        @select="handleMentionSelect"
+        @close="handleMentionClose"
+      />
     </div>
   </div>
 </template>

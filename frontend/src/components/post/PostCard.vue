@@ -18,7 +18,7 @@ const timeAgo = computed(() => {
 </script>
 
 <template>
-  <article class="card card-hover p-6">
+  <article class="card card-hover p-6 post-card">
     <div class="flex items-start space-x-4">
       <RouterLink :to="`/profile/${post.author.username}`" class="flex-shrink-0">
         <img
@@ -26,6 +26,7 @@ const timeAgo = computed(() => {
           :src="post.author.avatar_url"
           :alt="post.author.username"
           class="w-10 h-10 rounded-full object-cover"
+          loading="lazy"
         />
         <div
           v-else
@@ -51,7 +52,7 @@ const timeAgo = computed(() => {
         </div>
 
         <RouterLink :to="`/post/${post.id}`" class="block mt-1">
-          <h2 class="text-lg font-semibold text-slate-900 hover:text-primary transition-colors line-clamp-2">
+          <h2 class="post-title text-lg font-semibold text-slate-900 hover:text-primary transition-colors line-clamp-2">
             {{ post.title }}
           </h2>
         </RouterLink>

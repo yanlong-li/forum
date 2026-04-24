@@ -12,12 +12,12 @@ impl<'a> CommentRepository<'a> {
         Self { pool }
     }
 
-    pub async fn create(&self, id: &str, post_id: &str, author_id: &str, parent_id: Option<&str>, content: &str) -> Result<Comment> {
+    pub async fn create(&self, id: &str, post_id: &str, author_id: &str, parent_id: Option<&str>, content: &str, root_parent_id: Option<&str>) -> Result<Comment> {
         let now = chrono::Utc::now().to_rfc3339();
         let comment = sqlx::query_as::<_, Comment>(
             r#"
-            INSERT INTO comments (id, post_id, author_id, parent_id, content, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO comments (id, post_id, author_id, parent_id, content, root_parent_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING *
             "#
         )
@@ -26,6 +26,7 @@ impl<'a> CommentRepository<'a> {
         .bind(author_id)
         .bind(parent_id)
         .bind(content)
+        .bind(root_parent_id)
         .bind(&now)
         .bind(&now)
         .fetch_one(self.pool)
@@ -139,6 +140,7 @@ impl<'a> CommentRepository<'a> {
                 like_count: c.13,
                 is_liked: false,
                 reply_count: c.14,
+                replies: Vec::new(),
                 created_at: c.6,
                 updated_at: c.7,
             }
@@ -186,6 +188,65 @@ impl<'a> CommentRepository<'a> {
                 like_count: c.13,
                 is_liked: false,
                 reply_count: c.14,
+                replies: Vec::new(),
+                created_at: c.6,
+                updated_at: c.7,
+            }
+        }).collect();
+
+        Ok(result)
+    }
+
+    pub async fn list_comments_by_parent_ids(&self, parent_ids: &[String]) -> Result<Vec<CommentWithAuthor>> {
+        if parent_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let placeholders: Vec<String> = parent_ids.iter().map(|_| "?".to_string()).collect();
+        let query = format!(
+            r#"
+            SELECT c.id, c.post_id, c.author_id, c.parent_id, c.content, c.is_deleted, c.created_at, c.updated_at,
+                   u.id as u_id, u.username, u.avatar_url, u.bio, u.created_at as u_created_at,
+                   (SELECT COUNT(*) FROM votes WHERE comment_id = c.id AND value = 1) as like_count,
+                   (SELECT COUNT(*) FROM comments WHERE parent_id = c.id AND is_deleted = 0) as reply_count,
+                   u.is_admin as u_is_admin
+            FROM comments c
+            JOIN users u ON c.author_id = u.id
+            WHERE c.parent_id IN ({}) AND c.is_deleted = 0
+            ORDER BY c.created_at ASC
+            "#,
+            placeholders.join(",")
+        );
+
+        let mut query_builder = sqlx::query_as::<_, (String, String, String, Option<String>, String, bool, String, String, String, String, Option<String>, Option<String>, String, i64, i64, bool)>(&query);
+        for id in parent_ids {
+            query_builder = query_builder.bind(id);
+        }
+
+        let comments = query_builder.fetch_all(self.pool).await?;
+
+        let result: Vec<CommentWithAuthor> = comments.into_iter().map(|c| {
+            CommentWithAuthor {
+                id: c.0,
+                post_id: c.1,
+                author_id: c.2,
+                author: UserPublic {
+                    id: c.8,
+                    username: c.9,
+                    avatar_url: c.10,
+                    bio: c.11,
+                    is_admin: c.15,
+                    points: 0,
+                    level: 1,
+                    created_at: c.12,
+                },
+                parent_id: c.3,
+                content: c.4,
+                is_deleted: c.5,
+                like_count: c.13,
+                is_liked: false,
+                reply_count: c.14,
+                replies: Vec::new(),
                 created_at: c.6,
                 updated_at: c.7,
             }
@@ -245,6 +306,7 @@ impl<'a> CommentRepository<'a> {
                 like_count: c.13,
                 is_liked: false,
                 reply_count: c.14,
+                replies: Vec::new(),
                 created_at: c.6,
                 updated_at: c.7,
             }

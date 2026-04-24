@@ -69,6 +69,7 @@ onMounted(() => {
               :src="user.avatar_url"
               :alt="user.username"
               class="w-10 h-10 rounded-full object-cover"
+              loading="lazy"
             />
             <div
               v-else

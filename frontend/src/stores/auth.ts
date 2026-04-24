@@ -29,6 +29,8 @@ export const useAuthStore = defineStore('auth', () => {
 
     localStorage.setItem('access_token', data.access_token)
     localStorage.setItem('refresh_token', data.refresh_token)
+
+    window.dispatchEvent(new CustomEvent('user-logged-in'))
   }
 
   async function register(username: string, email: string, password: string) {

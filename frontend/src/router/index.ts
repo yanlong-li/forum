@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { usePrefetch } from '../composables/usePrefetch'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -133,6 +134,8 @@ router.beforeEach((to, _from, next) => {
   } else if (to.meta.requiresAdmin && !authStore.isAdmin) {
     next({ name: 'home' })
   } else {
+    const { prefetchOnHover } = usePrefetch()
+    prefetchOnHover(to.fullPath)
     next()
   }
 })

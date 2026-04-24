@@ -27,7 +27,9 @@ const loading = ref(true)
 const page = ref(1)
 const hasMore = ref(true)
 const replyingTo = ref<string | null>(null)
+const replyingToReply = ref<string | null>(null)
 const replyContent = ref('')
+const replyToReplyContent = ref('')
 const submitting = ref(false)
 const showReportModal = ref(false)
 const reportingCommentId = ref<string | undefined>(undefined)
@@ -58,6 +60,11 @@ async function handleReply(parentId: string) {
   replyContent.value = ''
 }
 
+async function handleReplyToReply(replyId: string) {
+  replyingToReply.value = replyId
+  replyToReplyContent.value = ''
+}
+
 async function submitReply(parentId: string) {
   if (!replyContent.value.trim()) return
 
@@ -78,9 +85,34 @@ async function submitReply(parentId: string) {
   }
 }
 
+async function submitReplyToReply(replyId: string) {
+  if (!replyToReplyContent.value.trim()) return
+
+  submitting.value = true
+  try {
+    await api.post(`/comments/posts/${props.postId}/comments`, {
+      content: replyToReplyContent.value,
+      parent_id: replyId,
+    })
+    toast.success(t('comment.replyAdded'))
+    replyToReplyContent.value = ''
+    replyingToReply.value = null
+    await fetchComments()
+  } catch (err: any) {
+    toast.error(t('error.comment.addFailed'))
+  } finally {
+    submitting.value = false
+  }
+}
+
 function cancelReply() {
   replyingTo.value = null
   replyContent.value = ''
+}
+
+function cancelReplyToReply() {
+  replyingToReply.value = null
+  replyToReplyContent.value = ''
 }
 
 function openReportModal(commentId: string) {
@@ -160,12 +192,13 @@ watch(() => props.refreshKey, () => {
       >
         <div class="flex items-start space-x-4">
           <RouterLink :to="`/profile/${comment.author.username}`" class="flex-shrink-0">
-            <img
-              v-if="comment.author.avatar_url"
-              :src="comment.author.avatar_url"
-              :alt="comment.author.username"
-              class="w-10 h-10 rounded-full object-cover"
-            />
+              <img
+                v-if="comment.author.avatar_url"
+                :src="comment.author.avatar_url"
+                :alt="comment.author.username"
+                class="w-8 h-8 rounded-full object-cover"
+                loading="lazy"
+              />
             <div
               v-else
               class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-medium"
@@ -260,7 +293,97 @@ watch(() => props.refreshKey, () => {
               </div>
             </div>
 
-            <div v-if="comment.reply_count > 0" class="mt-4 ml-4 space-y-4 border-l-2 border-slate-100 pl-4">
+            <div v-if="comment.replies && comment.replies.length > 0" class="mt-4 ml-4 space-y-4 border-l-2 border-slate-100 pl-4">
+              <div
+                v-for="reply in comment.replies"
+                :key="reply.id"
+                class="flex items-start space-x-3"
+              >
+                <RouterLink :to="`/profile/${reply.author.username}`" class="flex-shrink-0">
+                  <img
+                    v-if="reply.author.avatar_url"
+                    :src="reply.author.avatar_url"
+                    :alt="reply.author.username"
+                    class="w-6 h-6 rounded-full object-cover"
+                    loading="lazy"
+                  />
+                  <div
+                    v-else
+                    class="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-medium"
+                  >
+                    {{ reply.author.username.charAt(0).toUpperCase() }}
+                  </div>
+                </RouterLink>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center space-x-2">
+                    <RouterLink
+                      :to="`/profile/${reply.author.username}`"
+                      class="font-medium text-slate-900 hover:text-primary text-sm"
+                    >
+                      {{ reply.author.username }}
+                    </RouterLink>
+                    <span class="text-slate-400 text-xs">
+                      {{ formatDistanceToNow(new Date(reply.created_at)) }}
+                    </span>
+                  </div>
+                  <div class="mt-1 text-slate-700 text-sm">
+                    <MarkdownRenderer :content="reply.content" />
+                  </div>
+                  <div class="mt-2 flex items-center space-x-3">
+                    <button
+                      @click="handleVote(reply.id, 1)"
+                      class="flex items-center space-x-1 text-xs transition-colors"
+                      :class="reply.is_liked ? 'text-primary' : 'text-slate-500 hover:text-primary'"
+                    >
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                      </svg>
+                      <span>{{ reply.like_count || 0 }}</span>
+                    </button>
+
+                    <button
+                      v-if="authStore.isAuthenticated"
+                      @click="handleReplyToReply(reply.id)"
+                      class="text-xs text-slate-500 hover:text-primary transition-colors"
+                    >
+                      {{ t('comment.reply') }}
+                    </button>
+
+                    <button
+                      v-if="authStore.isAuthenticated"
+                      @click="openReportModal(reply.id)"
+                      class="text-xs text-slate-500 hover:text-red-500 transition-colors"
+                    >
+                      {{ t('comment.report') }}
+                    </button>
+                  </div>
+
+                  <div v-if="replyingToReply === reply.id" class="mt-3 p-3 bg-slate-50 rounded-lg">
+                    <MarkdownEditor
+                      v-model="replyToReplyContent"
+                      :placeholder="t('comment.writeReplyPlaceholder')"
+                      min-height="80px"
+                    />
+                    <div class="mt-2 flex justify-end space-x-2">
+                      <button
+                        @click="cancelReplyToReply"
+                        class="btn btn-secondary text-sm"
+                      >
+                        {{ t('common.cancel') }}
+                      </button>
+                      <button
+                        @click="submitReplyToReply(reply.id)"
+                        :disabled="submitting || !replyToReplyContent.trim()"
+                        class="btn btn-primary text-sm"
+                      >
+                        {{ submitting ? t('comment.posting') : t('comment.postReply') }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div v-else-if="comment.reply_count > 0" class="mt-4 ml-4">
               <p class="text-sm text-slate-500">{{ comment.reply_count }} {{ t('comment.replies') }}</p>
             </div>
           </div>

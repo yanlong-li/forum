@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import api from '../composables/useApi'
@@ -14,17 +14,65 @@ const { t } = useI18n()
 const posts = ref<any[]>([])
 const tags = ref<any[]>([])
 const loading = ref(true)
+const loadingMore = ref(false)
 const page = ref(1)
 const hasMore = ref(true)
 const activeTab = ref<'latest' | 'hot'>('latest')
-const { getPrefetchedData, hasPrefetchedData } = usePrefetch()
+const { getPrefetchedData, hasPrefetchedData, prefetchHome } = usePrefetch()
+const loadMoreTrigger = ref<HTMLElement | null>(null)
+let observer: IntersectionObserver | null = null
 
-async function fetchPosts() {
-  if (page.value === 1 && hasPrefetchedData('home') && activeTab.value === 'latest') {
-    const data = getPrefetchedData('home')
+const CACHE_DURATION = 5000
+const tabCache = ref<{
+  latest: { posts: any[], total: number, timestamp: number } | null
+  hot: { posts: any[], total: number, timestamp: number } | null
+}>({ latest: null, hot: null })
+
+function getCachedPosts(tab: 'latest' | 'hot') {
+  const cached = tabCache.value[tab]
+  if (!cached) return null
+  if (Date.now() - cached.timestamp > CACHE_DURATION) {
+    tabCache.value[tab] = null
+    return null
+  }
+  return cached
+}
+
+function setCachedPosts(tab: 'latest' | 'hot', data: { posts: any[], total: number }) {
+  tabCache.value[tab] = {
+    posts: data.posts,
+    total: data.total,
+    timestamp: Date.now()
+  }
+}
+
+async function fetchPosts(useCache = true) {
+  const cached = page.value === 1 && useCache ? getCachedPosts(activeTab.value) : null
+
+  if (cached) {
+    posts.value = cached.posts
+    hasMore.value = posts.value.length < cached.total
+    loading.value = false
+    return
+  }
+
+  if (page.value === 1 && activeTab.value === 'latest' && hasPrefetchedData('home-latest')) {
+    const data = getPrefetchedData('home-latest')
     posts.value = data.posts
     hasMore.value = posts.value.length < data.total
     loading.value = false
+    setCachedPosts('latest', data)
+    prefetchHome()
+    return
+  }
+
+  if (page.value === 1 && activeTab.value === 'hot' && hasPrefetchedData('home-hot')) {
+    const data = getPrefetchedData('home-hot')
+    posts.value = data.posts
+    hasMore.value = posts.value.length < data.total
+    loading.value = false
+    setCachedPosts('hot', data)
+    prefetchHome()
     return
   }
 
@@ -35,6 +83,8 @@ async function fetchPosts() {
 
     if (page.value === 1) {
       posts.value = data.posts
+      setCachedPosts(activeTab.value, data)
+      prefetchHome()
     } else {
       posts.value.push(...data.posts)
     }
@@ -44,6 +94,43 @@ async function fetchPosts() {
     console.error('Failed to fetch posts:', error)
   } finally {
     loading.value = false
+    loadingMore.value = false
+  }
+}
+
+async function loadMore() {
+  if (loadingMore.value || !hasMore.value) return
+  loadingMore.value = true
+  page.value++
+  await fetchPosts(false)
+}
+
+function setupInfiniteScroll() {
+  if (observer) {
+    observer.disconnect()
+  }
+
+  observer = new IntersectionObserver(
+    (entries) => {
+      if (entries[0].isIntersecting && hasMore.value && !loadingMore.value && !loading.value) {
+        loadMore()
+      }
+    },
+    { rootMargin: '200px' }
+  )
+
+  if (loadMoreTrigger.value) {
+    observer.observe(loadMoreTrigger.value)
+  }
+}
+
+function handleNewPost() {
+  if (activeTab.value === 'latest') {
+    const cached = getCachedPosts('latest')
+    if (cached) {
+      cached.timestamp = 0
+    }
+    fetchPosts()
   }
 }
 
@@ -74,21 +161,36 @@ async function fetchAnnouncement() {
   }
 }
 
-function loadMore() {
-  page.value++
-  fetchPosts()
-}
-
 watch(activeTab, () => {
   page.value = 1
-  posts.value = []
-  fetchPosts()
+  const cached = getCachedPosts(activeTab.value)
+  if (cached) {
+    posts.value = cached.posts
+    hasMore.value = posts.value.length < cached.total
+    loading.value = false
+  } else {
+    fetchPosts()
+  }
+  nextTick(() => {
+    setupInfiniteScroll()
+  })
 })
 
 onMounted(() => {
   fetchPosts()
   fetchTags()
   fetchAnnouncement()
+  window.addEventListener('new-post', handleNewPost)
+  nextTick(() => {
+    setupInfiniteScroll()
+  })
+})
+
+onUnmounted(() => {
+  window.removeEventListener('new-post', handleNewPost)
+  if (observer) {
+    observer.disconnect()
+  }
 })
 </script>
 
@@ -137,13 +239,20 @@ onMounted(() => {
             :post="post"
           />
 
-          <div v-if="hasMore" class="flex justify-center mt-6">
-            <button
-              @click="loadMore"
-              class="btn btn-secondary"
-            >
-              {{ t('home.loadMore') }}
-            </button>
+          <div
+            ref="loadMoreTrigger"
+            class="h-10 flex items-center justify-center"
+          >
+            <div v-if="loadingMore" class="flex items-center space-x-2 text-slate-500">
+              <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>Loading more...</span>
+            </div>
+            <span v-else-if="!hasMore && posts.length > 0" class="text-slate-400">
+              No more posts
+            </span>
           </div>
         </div>
       </div>

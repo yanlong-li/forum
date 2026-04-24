@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import api from '../composables/useApi'
@@ -101,8 +101,23 @@ async function handleComment() {
   }
 }
 
+function handleNewComment(event: CustomEvent) {
+  const payload = event.detail
+  if (payload.post_id === route.params.id) {
+    commentRefreshKey.value++
+    if (post.value) {
+      post.value.comment_count = (post.value.comment_count || 0) + 1
+    }
+  }
+}
+
 onMounted(() => {
   fetchPost()
+  window.addEventListener('new-comment', handleNewComment as EventListener)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('new-comment', handleNewComment as EventListener)
 })
 </script>
 
@@ -124,6 +139,7 @@ onMounted(() => {
               :src="post.author.avatar_url"
               :alt="post.author.username"
               class="w-12 h-12 rounded-full object-cover"
+              loading="lazy"
             />
             <div
               v-else
