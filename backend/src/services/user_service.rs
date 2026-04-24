@@ -23,8 +23,10 @@ impl<'a> UserService<'a> {
         let user_repo = UserRepository::new(self.pool);
 
         if let Some(username) = &req.username {
-            if user_repo.find_by_username(username).await?.is_some() {
-                return Err(AppError::Conflict("Username already taken".to_string()));
+            if let Some(existing) = user_repo.find_by_username(username).await? {
+                if existing.id != user_id {
+                    return Err(AppError::Conflict("Username already taken".to_string()));
+                }
             }
         }
 
