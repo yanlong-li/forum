@@ -56,8 +56,8 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function refreshAccessToken() {
-    if (!refreshToken.value) return
+  async function refreshAccessToken(): Promise<boolean> {
+    if (!refreshToken.value) return false
 
     try {
       const response = await api.post('/auth/refresh', {
@@ -70,8 +70,10 @@ export const useAuthStore = defineStore('auth', () => {
 
       localStorage.setItem('access_token', data.access_token)
       localStorage.setItem('refresh_token', data.refresh_token)
+      return true
     } catch {
       logout()
+      return false
     }
   }
 
